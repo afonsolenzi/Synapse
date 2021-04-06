@@ -1,0 +1,19 @@
+{
+	"name": "SQL-On-Demand-ExternalTable",
+	"properties": {
+		"folder": {
+			"name": "Other Scripts"
+		},
+		"content": {
+			"query": "CREATE MASTER KEY ENCRYPTION BY PASSWORD = '******'\nGO\n\nCREATE DATABASE SCOPED CREDENTIAL [SynapseIdentity]\nWITH IDENTITY = 'Managed Identity';\nGO\n\nCREATE EXTERNAL DATA SOURCE synapse\nWITH (    LOCATION   = 'https://warnerdatalake.dfs.core.windows.net/synapse',\n          CREDENTIAL = [SynapseIdentity] \n)\n\nCREATE EXTERNAL FILE FORMAT PipeDelimitedWithNoHeaderFormat\nWITH (  \n    FORMAT_TYPE = DELIMITEDTEXT,\n    FORMAT_OPTIONS ( FIELD_TERMINATOR = '|')\n);\nGO\n\nCREATE EXTERNAL FILE FORMAT [ParquetFF] WITH (\n    FORMAT_TYPE = PARQUET,\n    DATA_COMPRESSION = 'org.apache.hadoop.io.compress.SnappyCodec'\n);\nGO\n\nCREATE EXTERNAL TABLE nation\n(\n    n_nationkey int, \n    n_name char(25), \n    n_regionkey int, \n    n_comment varchar(152))\nWITH  \n  (   \n    LOCATION = 'hammerdb/nation_1.tbl',\n    DATA_SOURCE = synapse,\n    FILE_FORMAT = PipeDelimitedWithNoHeaderFormat\n);\n\nSELECT * FROM nation;\n\nSELECT * FROM nation WHERE N_NAME LIKE 'C%';\n\nCREATE EXTERNAL TABLE c_nations1 WITH (\n        LOCATION = 'hammerdb/c_nation1/',\n        DATA_SOURCE = synapse,\n        FILE_FORMAT = PipeDelimitedWithNoHeaderFormat\n) AS\nSELECT * FROM nation WHERE N_NAME LIKE 'C%';\n\n\nCREATE EXTERNAL TABLE c_nations_parquet WITH (\n        LOCATION = 'hammerdb/c_nation_parquet/',\n        DATA_SOURCE = synapse,\n        FILE_FORMAT = ParquetFF\n) AS\nSELECT * FROM c_nations_parquet;\n\n\nCREATE VIEW s_nation AS\nSELECT * FROM nation WHERE N_NAME LIKE 'S%';\n\nSELECT * FROM s_nation;\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"name": "demos",
+				"type": "SqlOnDemand"
+			}
+		},
+		"type": "SqlQuery"
+	}
+}

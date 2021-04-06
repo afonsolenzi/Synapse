@@ -1,0 +1,20 @@
+{
+	"name": "D2_SQLOD_SparkIntegration",
+	"properties": {
+		"folder": {
+			"name": "Music Service"
+		},
+		"content": {
+			"query": "-- views can be used to integrate lots of sources\nCREATE VIEW FullArtistProfileSpark\nAS\nSELECT af.ArtistName, af.Rate as LicensingRate, af.TicketSalesDollars, perf.total_plays SongPlays\nFROM augmentedArtistInformation af INNER JOIN musicservice.dbo.platform_artist_performance perf\nON af.ArtistName=perf.Artist COLLATE Database_Default;\n\nSELECT TOP 100 * FROM FullArtistProfileSpark\n-- notice we can see Spark dbs from the system view\nselect * from sys.databases;\n\n-- get the tables\nselect * from musicservice.sys.tables; -- no delta lake tables support for this integration (for now)\n\n-- try one table!\nSELECT TOP 100 * from musicservice.dbo.user_details;",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"poolName": "Built-in",
+				"databaseName": "master"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

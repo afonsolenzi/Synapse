@@ -1,0 +1,20 @@
+{
+	"name": "D4_SQLDW_IncrementsSchema",
+	"properties": {
+		"folder": {
+			"name": "Music Service"
+		},
+		"content": {
+			"query": "CREATE SCHEMA increments;\n\nCREATE TABLE [increments].[watermarktable](\n\t[TableName] [varchar](255) NULL,\n\t[WatermarkValue] [datetime] NULL\n);\n\nCREATE TABLE [increments].[incremental_dataload_logs](\n\t[pipelinerunid] [varchar](255) NULL,\n\t[pipelinename] [varchar](255) NULL,\n\t[srctablename] [varchar](255) NULL,\n\t[srcschemaname] [varchar](255) NULL,\n\t[desttablename] [varchar](255) NULL,\n\t[destschemaname] [varchar](255) NULL,\n\t[rundate] [datetime] NULL,\n\t[loadtable_highwatermark] [datetime] NULL,\n\t[watermarktable_highwatermark] [datetime] NULL,\n\t[action] [varchar](255) NULL\n);\n\n\nCREATE procedure [increments].[usp_incremental_dataload_logs] (@pipelinerunid varchar(255), @pipelinename varchar(255) ,\n\t@srctablename varchar(255) ,\n\t@srcschemaname varchar(255) ,\n\t@desttablename varchar(255) ,\n\t@destschemaname varchar(255) ,\n\t@rundate datetime ,\n\t@loadtable_highwatermark datetime ,\n\t@watermarktable_highwatermark datetime ,\n\t@action varchar(255))\nAS\ninsert into increments.incremental_dataload_logs values (@pipelinerunid, @pipelinename,\n\t@srctablename,\n\t@srcschemaname,\n\t@desttablename,\n\t@destschemaname,\n\t@rundate,\n\t@loadtable_highwatermark,\n\t@watermarktable_highwatermark,\n\t@action)\n\nGO\n\n\nCREATE PROCEDURE [increments].[usp_complete_load] @LastModifiedtime datetime, @TableName varchar(50)\nAS\n\nBEGIN\ndeclare @commandString nvarchar(1000);\n\n-- perform any transformation on the increments data here\n\n-- then copy into the permanent table\nIF NOT EXISTS (SELECT * FROM sys.objects O JOIN sys.schemas S ON O.schema_id = S.schema_id WHERE O.NAME = @TableName AND O.TYPE = 'U' AND S.NAME = 'musicService')\nBEGIN -- we have to create the table\n\nset @commandString = N'CREATE TABLE musicService.' + @TableName + ' WITH\n\t(\n\tDISTRIBUTION = ROUND_ROBIN\n\t) AS SELECT * FROM increments.'+ @TableName;\n\n \nEND\nELSE -- the table is already there\nBEGIN\n\n-- NOTE I'M DOING APPEND ONLY BUT YOU COULD DO AN UPDATE + INSERT INSTEAD IF YOU WANT\nset @commandString = N'INSERT INTO musicService.' + @TableName + '\nSELECT * FROM increments.'+ @TableName;\n\nEND\n\nEXECUTE sp_executesql @commandString;\n\n-- clear the contents we just copied\nset @commandString = N'TRUNCATE TABLE increments.' + @TableName;\nEXECUTE sp_executesql @commandString;\n\n-- finally update the watermark\nUPDATE increments.watermarktable\nSET [WatermarkValue] = @LastModifiedtime\nWHERE [TableName] = @TableName\nEND\nGO",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"poolName": "SQLDW",
+				"databaseName": "SQLDW"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

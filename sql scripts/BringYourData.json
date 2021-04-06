@@ -1,0 +1,19 @@
+{
+	"name": "BringYourData",
+	"properties": {
+		"folder": {
+			"name": "Other Scripts"
+		},
+		"content": {
+			"query": "/*This sample uses COPY command to load data. You can either modify parameters or use BulkCopy utility by right clicking data from storage account to generate this script for loading your own data */\n \n    IF NOT EXISTS (SELECT * FROM information_schema.tables WHERE table_name = 'Weather')\n        CREATE TABLE [dbo].[Weather](\n            [usaf] [nvarchar](200) NULL,\n            [wban] [nvarchar](200) NULL,\n            [datetime] [datetime] NULL,\n            [latitude] [float] NULL,\n            [longitude] [float] NULL,\n            [elevation] [float] NULL,\n            [windAngle] [int] NULL,\n            [windSpeed] [float] NULL,\n            [temperature] [float] NULL,\n            [seaLvlPressure] [float] NULL,\n            [cloudCoverage] [nvarchar](200) NULL,\n            [presentWeatherIndicator] [int] NULL,\n            [pastWeatherIndicator] [int] NULL,\n            [precipTime] [float] NULL,\n            [precipDepth] [float] NULL,\n            [snowDepth] [float] NULL,\n            [stationName] [nvarchar](200) NULL,\n            [countryOrRegion] [nvarchar](200) NULL,\n            [p_k] [nvarchar](200) NULL,\n            [year] [int] NULL,\n            [day] [int] NULL,\n            [version] [float] NULL,\n            [month] [int] NULL\n        )\n        WITH\n        (\n            DISTRIBUTION = ROUND_ROBIN,\n            CLUSTERED COLUMNSTORE INDEX\n        )\n        GO\n    \n    COPY INTO Weather FROM 'https://azureopendatastorage.blob.core.windows.net/isdweatherdatacontainer/ISDWeather/year=2018/month=2/'\n    WITH (\n       FILE_TYPE = 'PARQUET',\n       CREDENTIAL=(IDENTITY= 'Shared Access Signature', SECRET='\"\"')\n    ) OPTION (LABEL = 'COPY: Getting started');",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"name": "GetStartedSQL",
+				"type": "SqlPool"
+			}
+		},
+		"type": "SqlQuery"
+	}
+}
