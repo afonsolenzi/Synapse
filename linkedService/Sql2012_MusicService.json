@@ -1,0 +1,23 @@
+{
+	"name": "Sql2012_MusicService",
+	"type": "Microsoft.Synapse/workspaces/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "SqlServer",
+		"typeProperties": {
+			"connectionString": "Integrated Security=False;Data Source=sql2012demo;Initial Catalog=MusicService;User ID=adfuser",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "Secrets_Azure_Key_Vault",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "sql2012-adfuser-password"
+			}
+		},
+		"connectVia": {
+			"referenceName": "IntegrationRuntime-AzureVNET",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

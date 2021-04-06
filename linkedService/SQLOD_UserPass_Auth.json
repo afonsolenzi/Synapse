@@ -1,0 +1,23 @@
+{
+	"name": "SQLOD_UserPass_Auth",
+	"type": "Microsoft.Synapse/workspaces/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureSqlDatabase",
+		"typeProperties": {
+			"connectionString": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=warnersynapse-ondemand.sql.azuresynapse.net;Initial Catalog=demos;User ID=reader",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "Secrets_Azure_Key_Vault",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "sqlod-reader-password"
+			}
+		},
+		"connectVia": {
+			"referenceName": "AutoResolveIntegrationRuntime",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

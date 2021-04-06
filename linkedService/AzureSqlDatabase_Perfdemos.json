@@ -1,0 +1,23 @@
+{
+	"name": "AzureSqlDatabase_Perfdemos",
+	"type": "Microsoft.Synapse/workspaces/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureSqlDatabase",
+		"typeProperties": {
+			"connectionString": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=perfdemos.database.windows.net;Initial Catalog=LastFMDataSet;User ID=warneradmin",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "Secrets_Azure_Key_Vault",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "LastFMDataSet-db-password"
+			}
+		},
+		"connectVia": {
+			"referenceName": "AutoResolveIntegrationRuntime",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}
