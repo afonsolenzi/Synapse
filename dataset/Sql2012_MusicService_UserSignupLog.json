@@ -1,0 +1,40 @@
+{
+	"name": "Sql2012_MusicService_UserSignupLog",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Sql2012_MusicService",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": [
+			{
+				"name": "SignupLogId",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "UserId",
+				"type": "varchar"
+			},
+			{
+				"name": "Country",
+				"type": "varchar"
+			},
+			{
+				"name": "SignupDate",
+				"type": "date"
+			},
+			{
+				"name": "SignupTime",
+				"type": "int",
+				"precision": 10
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "usersignup_log"
+		}
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

@@ -1,0 +1,21 @@
+{
+	"name": "useratistplaysProcessedParquet",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "warnersynapse-WorkspaceDefaultStorage",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": "upload/userartistplays/processed",
+				"fileSystem": "synapse"
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": []
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

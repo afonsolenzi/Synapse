@@ -1,0 +1,29 @@
+{
+	"name": "usersignuplog_watermark",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "SQLOD",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "watermark",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "timestamp",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "usersignuplog_watermark"
+		}
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

@@ -1,0 +1,43 @@
+{
+	"name": "SQLOD_demos_UserDetailsWrangled",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "SQLOD_UserPass_Auth",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "UserID",
+				"type": "varchar"
+			},
+			{
+				"name": "Gender",
+				"type": "varchar"
+			},
+			{
+				"name": "Age",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "AgeRange",
+				"type": "varchar"
+			},
+			{
+				"name": "Country",
+				"type": "varchar"
+			},
+			{
+				"name": "SignupDate",
+				"type": "date"
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "userdetailswrangled"
+		}
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

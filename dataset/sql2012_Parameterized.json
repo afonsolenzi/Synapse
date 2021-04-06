@@ -1,0 +1,26 @@
+{
+	"name": "sql2012_Parameterized",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Sql2012_MusicService",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"DatabaseName": {
+				"type": "string",
+				"defaultValue": "dummy"
+			},
+			"TableName": {
+				"type": "string",
+				"defaultValue": "dummy"
+			},
+			"SchemaName": {
+				"type": "string",
+				"defaultValue": "dummy"
+			}
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": []
+	}
+}

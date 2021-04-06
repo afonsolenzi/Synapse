@@ -1,0 +1,22 @@
+{
+	"name": "SQLOD_ArtistList",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "SQLOD",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "ArtistName",
+				"type": "varchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "artistList"
+		}
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

@@ -1,0 +1,34 @@
+{
+	"name": "UserSignupLog_Parquet",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "warnerdatalake_key",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": "musicdata/etl/usersignuptimestamps",
+				"fileSystem": "synapse"
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": [
+			{
+				"name": "UserId",
+				"type": "UTF8"
+			},
+			{
+				"name": "signup_date",
+				"type": "DATE"
+			},
+			{
+				"name": "signup_time",
+				"type": "INT_32"
+			}
+		]
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

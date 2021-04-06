@@ -1,0 +1,31 @@
+{
+	"name": "SQLOD_demos_UserSignupTimestamps",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "SQLOD_UserPass_Auth",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "UserId",
+				"type": "varchar"
+			},
+			{
+				"name": "signup_date",
+				"type": "date"
+			},
+			{
+				"name": "signup_time",
+				"type": "int",
+				"precision": 10
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "userSignupTimestamps"
+		}
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

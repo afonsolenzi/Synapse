@@ -1,0 +1,32 @@
+{
+	"name": "DedicatedSQLPool_SQLDW",
+	"properties": {
+		"parameters": {
+			"SchemaName": {
+				"type": "string",
+				"defaultValue": "dummy"
+			},
+			"TableName": {
+				"type": "string",
+				"defaultValue": "dummy"
+			}
+		},
+		"annotations": [],
+		"type": "SqlPoolTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().SchemaName",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().TableName",
+				"type": "Expression"
+			}
+		},
+		"sqlPool": {
+			"referenceName": "SQLDW",
+			"type": "SqlPoolReference"
+		}
+	}
+}

@@ -1,0 +1,32 @@
+{
+	"name": "ArtistLicensingRatesTable",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabase_Perfdemos",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "ArtistID",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "ArtistName",
+				"type": "varchar"
+			},
+			{
+				"name": "Rate",
+				"type": "int",
+				"precision": 10
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "ArtistRates"
+		}
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

@@ -1,0 +1,21 @@
+{
+	"name": "UserDetailsWithTimeParquet",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "warnerdatalake_key",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": "musicdata/etl/userdetailswithtime",
+				"fileSystem": "synapse"
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": []
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

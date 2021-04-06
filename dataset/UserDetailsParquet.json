@@ -1,0 +1,42 @@
+{
+	"name": "UserDetailsParquet",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "warnerdatalake_key",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": "synapse/workspaces/warnersynapse/warehouse/musicservice.db/user_details",
+				"fileSystem": "synapse"
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": [
+			{
+				"name": "UserID",
+				"type": "UTF8"
+			},
+			{
+				"name": "Gender",
+				"type": "UTF8"
+			},
+			{
+				"name": "Age",
+				"type": "INT32"
+			},
+			{
+				"name": "Country",
+				"type": "UTF8"
+			},
+			{
+				"name": "SignupDate",
+				"type": "DATE"
+			}
+		]
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

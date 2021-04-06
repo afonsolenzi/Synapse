@@ -1,0 +1,34 @@
+{
+	"name": "AugmentedArtistInfo",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "warnersynapse-WorkspaceDefaultStorage",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": "musicdata",
+				"fileSystem": "synapse"
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": [
+			{
+				"name": "UserID",
+				"type": "UTF8"
+			},
+			{
+				"name": "Artist",
+				"type": "UTF8"
+			},
+			{
+				"name": "Plays",
+				"type": "INT32"
+			}
+		]
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

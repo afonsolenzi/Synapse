@@ -1,0 +1,27 @@
+{
+	"name": "usersignuplog_watermark_file",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "warnersynapse-WorkspaceDefaultStorage",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@concat('usersignuplog_watermark_',utcnow(),'.csv')",
+					"type": "Expression"
+				},
+				"folderPath": "musicdata/etl/usersignuplog_watermark",
+				"fileSystem": "synapse"
+			},
+			"columnDelimiter": "|",
+			"escapeChar": "\\",
+			"quoteChar": "\""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}
