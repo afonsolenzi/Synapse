@@ -1,0 +1,49 @@
+{
+	"name": "UserArtistPlays",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "useratistplaysFolder",
+						"type": "DatasetReference"
+					},
+					"name": "userArtistPlays"
+				},
+				{
+					"dataset": {
+						"referenceName": "SQLOD_ArtistList",
+						"type": "DatasetReference"
+					},
+					"name": "ArtistList"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "useratistplaysProcessedParquet",
+						"type": "DatasetReference"
+					},
+					"name": "ProcessedSink"
+				},
+				{
+					"dataset": {
+						"referenceName": "userartistplaysIssues",
+						"type": "DatasetReference"
+					},
+					"name": "IssuesSink"
+				}
+			],
+			"transformations": [
+				{
+					"name": "LeftOuterJoin"
+				},
+				{
+					"name": "ConditionalSplit1"
+				}
+			],
+			"script": "parameters{\n\tfileWildcard as string\n}\nsource(output(\n\t\tUser as string,\n\t\tArtist as string,\n\t\tPlays as integer\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tmoveFiles: ['','upload/userartistplays/archive'],\n\trowUrlColumn: 'sourceFile',\n\twildcardPaths:[('upload//userartistplays//' + $fileWildcard)]) ~> userArtistPlays\nsource(output(\n\t\tArtistName as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> ArtistList\nuserArtistPlays, ArtistList join(Artist == ArtistName,\n\tjoinType:'left',\n\tbroadcast: 'auto')~> LeftOuterJoin\nLeftOuterJoin split(!isNull(ArtistName),\n\tdisjoint: false) ~> ConditionalSplit1@(matched, notMatched)\nConditionalSplit1@matched sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tformat: 'parquet',\n\tpartitionFileNames:[('userArtistPlays' + toString(currentUTC()) + '.parquet')],\n\tmapColumn(\n\t\tUser,\n\t\tArtist,\n\t\tPlays,\n\t\tsourceFile\n\t),\n\tpartitionBy('hash', 1),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tsaveOrder: 1) ~> ProcessedSink\nConditionalSplit1@notMatched sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('userArtistPlays_Issues_' + toString(currentUTC()) + '.csv')],\n\tmapColumn(\n\t\tUser,\n\t\tArtist,\n\t\tPlays,\n\t\tsourceFile\n\t),\n\tpartitionBy('hash', 1),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> IssuesSink"
+		}
+	}
+}

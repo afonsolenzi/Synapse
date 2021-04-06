@@ -1,0 +1,29 @@
+{
+	"name": "UserDetailsWrangled_WDF",
+	"properties": {
+		"type": "WranglingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"name": "SQLOD_demos_UserDetails",
+					"script": "",
+					"dataset": {
+						"referenceName": "SQLOD_demos_UserDetails",
+						"type": "DatasetReference"
+					}
+				}
+			],
+			"sinks": [
+				{
+					"name": "Sink1",
+					"dataset": {
+						"referenceName": "UserDetailsWrangled_Parquet",
+						"type": "DatasetReference"
+					},
+					"script": "sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tformat: 'parquet',\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Sink1"
+				}
+			],
+			"script": "section Section1;\r\nshared SQLOD_demos_UserDetails = let\r\n  AdfDoc = Sql.Database(\"warnersynapse-ondemand.sql.azuresynapse.net\", \"demos\"),\r\n  InputTable = AdfDoc{[Schema = \"dbo\", Item = \"userdetails\"]}[Data]\r\nin\r\n  InputTable;\r\nshared UserQuery = let\r\n  Source = SQLOD_demos_UserDetails,\r\n  #\"Inserted conditional column\" = Table.AddColumn(Source, \"AgeRange\", each if [Age] < 18 then \"Minor\" else if [Age] >= 65 then \"Senior\" else \"Adult\"),\r\n  #\"Replaced value\" = Table.ReplaceValue(#\"Inserted conditional column\", \"m\", \"Male\", Replacer.ReplaceValue, {\"Gender\"}),\r\n  #\"Replaced value 1\" = Table.ReplaceValue(#\"Replaced value\", \"f\", \"Female\", Replacer.ReplaceValue, {\"Gender\"}),\r\n  #\"Reordered columns\" = Table.ReorderColumns(#\"Replaced value 1\", {\"UserID\", \"Gender\", \"Age\", \"AgeRange\", \"Country\", \"SignupDate\"})\r\nin\r\n  #\"Reordered columns\";\r\n"
+		}
+	}
+}

@@ -1,0 +1,37 @@
+{
+	"name": "UserDetails_TimeConversion_WDF_Pipeline",
+	"properties": {
+		"type": "WranglingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"name": "SQLOD_demos_UserDetailsWrangled",
+					"script": "source(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~>  SQLOD_demos_UserDetailsWrangled",
+					"dataset": {
+						"referenceName": "SQLOD_demos_UserDetailsWrangled",
+						"type": "DatasetReference"
+					}
+				},
+				{
+					"name": "SQLOD_demos_UserSignupTimestamps",
+					"script": "source(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~>  SQLOD_demos_UserSignupTimestamps",
+					"dataset": {
+						"referenceName": "SQLOD_demos_UserSignupTimestamps",
+						"type": "DatasetReference"
+					}
+				}
+			],
+			"sinks": [
+				{
+					"name": "SinkUserDetailsWithTimeParquet",
+					"dataset": {
+						"referenceName": "UserDetailsWithTimeParquet",
+						"type": "DatasetReference"
+					},
+					"script": "sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tformat: 'parquet',\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> SinkUserDetailsWithTimeParquet"
+				}
+			],
+			"script": "section Section1;\r\nshared SQLOD_demos_UserDetailsWrangled = let\r\n  AdfDoc = Sql.Database(\"warnersynapse-ondemand.sql.azuresynapse.net\", \"demos\"),\r\n  InputTable = AdfDoc{[Schema = \"dbo\", Item = \"userdetailswrangled\"]}[Data]\r\nin\r\n  InputTable;\r\nshared SQLOD_demos_UserSignupTimestamps = let\r\n  AdfDoc = Sql.Database(\"warnersynapse-ondemand.sql.azuresynapse.net\", \"demos\"),\r\n  InputTable = AdfDoc{[Schema = \"dbo\", Item = \"userSignupTimestamps\"]}[Data]\r\nin\r\n  InputTable;\r\nshared UserQuery = let\r\n  Source = SQLOD_demos_UserDetailsWrangled,\r\n  #\"Merged queries\" = Table.NestedJoin(Source, {\"UserID\"}, SQLOD_demos_UserSignupTimestamps, {\"UserId\"}, \"SQLOD_demos_UserSignupTimestamps\", JoinKind.Inner),\r\n  #\"Expanded SQLOD_demos_UserSignupTimestamps\" = Table.ExpandTableColumn(#\"Merged queries\", \"SQLOD_demos_UserSignupTimestamps\", {\"signup_time\"}, {\"SQLOD_demos_UserSignupTimestamps.signup_time\"}),\r\n  #\"Renamed columns\" = Table.RenameColumns(#\"Expanded SQLOD_demos_UserSignupTimestamps\", {{\"SQLOD_demos_UserSignupTimestamps.signup_time\", \"SignupTime\"}}),\r\n  #\"Added custom\" = Table.AddColumn(#\"Renamed columns\", \"Custom\", each Text.PadStart(Text.From([SignupTime]), 6, \"0\")),\r\n  #\"Added custom 1\" = Table.AddColumn(#\"Added custom\", \"Custom.1\", each Text.Middle([Custom],0,2) & \":\" & Text.Middle([Custom],2,2)& \":\" & Text.Middle([Custom],4,2)),\r\n  #\"Removed columns\" = Table.RemoveColumns(#\"Added custom 1\", {\"SignupTime\", \"Custom\"}),\r\n  #\"Added custom 2\" = Table.AddColumn(#\"Removed columns\", \"SignupDatetime\", each Text.From([SignupDate]) & \" \" & [Custom.1]),\r\n  #\"Changed column type\" = Table.TransformColumnTypes(#\"Added custom 2\", {{\"SignupDatetime\", type datetime}}),\r\n  #\"Removed columns 1\" = Table.RemoveColumns(#\"Changed column type\", {\"Custom.1\", \"SignupDate\"})\r\nin\r\n  #\"Removed columns 1\";\r\n"
+		}
+	}
+}
