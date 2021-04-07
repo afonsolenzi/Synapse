@@ -1,0 +1,20 @@
+{
+	"name": "PRE_DEMOS_SQLOD_DropTables",
+	"properties": {
+		"folder": {
+			"name": "Music Service"
+		},
+		"content": {
+			"query": "-- cleanup all external tables before the next class\n-- change db to demos\n\nDROP EXTERNAL TABLE dbo.artistList;\nDROP EXTERNAL TABLE dbo.augmentedArtistInformation;\nDROP EXTERNAL TABLE dbo.FullArtistProfileDec2020;\nDROP EXTERNAL TABLE dbo.fullArtistProfileHistorical;\nDROP EXTERNAL TABLE dbo.FullArtistProfileJan2021;\nDROP EXTERNAL TABLE dbo.FullArtistProfileNov2020;\nDROP EXTERNAL TABLE dbo.userArtistPlays;\nDROP EXTERNAL TABLE dbo.userdetails;\nDROP EXTERNAL TABLE dbo.userdetailswrangled;\n\n-- delete the folders / files from Azure Data Lake too\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"poolName": "Built-in",
+				"databaseName": "demos"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

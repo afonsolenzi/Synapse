@@ -1,0 +1,20 @@
+{
+	"name": "D3_SQLOD_CosmosLink",
+	"properties": {
+		"folder": {
+			"name": "Music Service"
+		},
+		"content": {
+			"query": "-- setup a credential with your cosmos db key\nCREATE CREDENTIAL CosmosDbAccountCredential\n    WITH IDENTITY = 'SHARED ACCESS SIGNATURE', SECRET = 'kinTjPfP*******************************c57TGJthYcfl7t8Ng==';\n\n-- Nicer to wrap the OPENROWSET call in a View so consumers don't need to type this out every single time\nCREATE OR ALTER VIEW cosmosTrendingArtists\nAS\nSELECT TOP 100 artistName,activeUsersListening,currentDirection,trendingCountry,\nconvert(datetimeoffset,artistListenCountTimestamp) as captureTime\nFROM OPENROWSET (\n    PROVIDER='CosmosDB', \n    CONNECTION='account=cdemos;database=MusicService;region=canadacentral',\n    OBJECT='TrendingArtists',\n    SERVER_CREDENTIAL='CosmosDbAccountCredential'\n) \nWITH ( \n    artistName varchar(50), \n    activeUsersListening bigint,\n    currentDirection varchar(20), \n    trendingCountry varchar(50), \n    artistListenCountTimestamp varchar(30) ) AS TrendingArtists\nORDER BY artistListenCountTimestamp DESC\nGO\n\nselect * from cosmosTrendingArtists;\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"poolName": "Built-in",
+				"databaseName": "demos"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

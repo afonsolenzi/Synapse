@@ -1,0 +1,20 @@
+{
+	"name": "D4_SQLDW_IncrementsSetup",
+	"properties": {
+		"folder": {
+			"name": "Music Service"
+		},
+		"content": {
+			"query": "-- test contents after running the D11 pipeline\nselect * from increments.incremental_dataload_logs\norder by rundate desc;\n\nselect * from increments.watermarktable;\n\nselect * from musicService.ArtistCountries;\nselect * from musicService.RecordLabels;\n\n-- DEMO RESET\n-- Cleanup in case you're resetting the demo\nDROP TABLE musicService.ArtistCountries;\nDROP TABLE musicService.RecordLabels;\n\nDROP TABLE increments.ArtistCountries;\nDROP TABLE increments.RecordLabels;\n\ntruncate table increments.watermarktable;\ntruncate table increments.incremental_dataload_logs;\n\n-- setup the tables to be loaded with old watermarks the first time\ninsert into increments.watermarktable\nSELECT 'ArtistCountries','2000-01-01'\nUNION\nSELECT 'RecordLabels','2000-01-01';\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"poolName": "SQLDW",
+				"databaseName": "SQLDW"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

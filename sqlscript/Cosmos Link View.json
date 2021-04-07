@@ -1,0 +1,19 @@
+{
+	"name": "Cosmos Link View",
+	"properties": {
+		"folder": {
+			"name": "Other Scripts"
+		},
+		"content": {
+			"query": "CREATE VIEW cosmosMachineRecords\nAS\nSELECT TOP 100 machineName,temperature,factoryName,convert(datetimeoffset,temperatureReadTimestamp) as captureTime\nFROM OPENROWSET (\n    'CosmosDB', \n    'account=cdemos;database=Factory;region=canadacentral;key=**************************',\n    Machines   \n) WITH ( machineName varchar(20), temperature float, factoryName varchar(20), temperatureReadTimestamp varchar(30) ) AS Machines\nORDER BY temperatureReadTimestamp DESC\nGO\n\nselect * from cosmosMachineRecords\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"name": "demos",
+				"type": "SqlOnDemand"
+			}
+		},
+		"type": "SqlQuery"
+	}
+}
