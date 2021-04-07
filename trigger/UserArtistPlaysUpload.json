@@ -1,0 +1,30 @@
+{
+	"name": "UserArtistPlaysUpload",
+	"properties": {
+		"description": "Kicks off a pipeline when a new userArtistPlays file is uploaded",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "D1_Trigger_SQLOD_UserArtistPlays",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"sourceFolder": "@triggerBody().folderPath",
+					"sourceFilename": "@triggerBody().fileName"
+				}
+			}
+		],
+		"type": "BlobEventsTrigger",
+		"typeProperties": {
+			"blobPathBeginsWith": "/synapse/blobs/upload/userartistplays/userartistplays",
+			"blobPathEndsWith": ".csv",
+			"ignoreEmptyBlobs": true,
+			"scope": "/subscriptions/04bd17bd-fb60-43b0-ab6d-d660321e6a83/resourceGroups/datalake/providers/Microsoft.Storage/storageAccounts/warnerdatalake",
+			"events": [
+				"Microsoft.Storage.BlobCreated"
+			]
+		}
+	}
+}
