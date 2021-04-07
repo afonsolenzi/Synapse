@@ -1,0 +1,67 @@
+{
+	"name": "Demo Notebook",
+	"properties": {
+		"folder": {
+			"name": "Other Notebooks"
+		},
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "DemoPool",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 2
+		},
+		"metadata": {
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/04bd17bd-fb60-43b0-ab6d-d660321e6a83/resourceGroups/synapse/providers/Microsoft.Synapse/workspaces/warnersynapse/bigDataPools/DemoPool",
+				"name": "DemoPool",
+				"type": "Spark",
+				"endpoint": "https://warnersynapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/DemoPool",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "2.4",
+				"nodeCount": 3,
+				"cores": 4,
+				"memory": 28
+			}
+		},
+		"cells": [
+			{
+				"cell_type": "code",
+				"source": [
+					"%%pyspark\n",
+					"from pyspark.sql import SparkSession\n",
+					"from pyspark.sql.types import *\n",
+					"\n",
+					"\n",
+					"customSchema = StructType([\n",
+					"    StructField(\"r_regionkey\", IntegerType(), True),        \n",
+					"    StructField(\"r_name\", StringType(), True),\n",
+					"    StructField(\"r_comment\", StringType(), True)\n",
+					"])\n",
+					"\n",
+					"regionsDF = spark.read.load('abfss://synapse@warnerdatalake.dfs.core.windows.net/hammerdb/region_1.tbl', format=\"csv\", header=\"false\", sep='|', schema=customSchema)"
+				],
+				"execution_count": 3
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"regionsDF.show()"
+				],
+				"execution_count": 5
+			}
+		]
+	}
+}

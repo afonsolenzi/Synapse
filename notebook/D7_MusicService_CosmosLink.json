@@ -1,0 +1,167 @@
+{
+	"name": "D7_MusicService_CosmosLink",
+	"properties": {
+		"folder": {
+			"name": "Music Service"
+		},
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "DemoPool",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 2,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"synapse_widget": {
+				"version": "0.1"
+			},
+			"kernelspec": {
+				"name": "synapse_pyspark",
+				"display_name": "Synapse PySpark"
+			},
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/04bd17bd-fb60-43b0-ab6d-d660321e6a83/resourceGroups/synapse/providers/Microsoft.Synapse/workspaces/warnersynapse/bigDataPools/DemoPool",
+				"name": "DemoPool",
+				"type": "Spark",
+				"endpoint": "https://warnersynapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/DemoPool",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "2.4",
+				"nodeCount": 5,
+				"cores": 4,
+				"memory": 28,
+				"automaticScaleJobs": false
+			},
+			"sessionKeepAliveTimeout": 30
+		},
+		"cells": [
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"\n",
+					"use musicservice"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"-- Create a Spark table over Cosmos DB analytical store\n",
+					"-- To select a preferred list of regions in a multi-region Cosmos DB account, add spark.cosmos.preferredRegions '<Region1>,<Region2>' in the config options\n",
+					"\n",
+					"create table CosmosTrendingArtists using cosmos.olap options (\n",
+					"    spark.synapse.linkedService 'CosmosDb_MusicService',\n",
+					"    spark.cosmos.container 'TrendingArtists'\n",
+					")"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"ArtistName"
+							],
+							"values": [
+								"avg(activeUsersListening)"
+							],
+							"yLabel": "avg(activeUsersListening)",
+							"xLabel": "ArtistName",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{\"avg(activeUsersListening)\":{\"anna kendrick\":156.66666666666666,\"devotchka\":495,\"finger eleven\":306.6666666666667,\"passion pit\":382,\"sevendust\":247,\"the national\":325.3333333333333}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"\n",
+					"SELECT ArtistName, trendingCountry, avg(activeUsersListening) \n",
+					"FROM CosmosTrendingArtists\n",
+					"GROUP BY ArtistName, trendingCountry"
+				],
+				"execution_count": null
+			}
+		]
+	}
+}

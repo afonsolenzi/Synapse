@@ -1,0 +1,99 @@
+{
+	"name": "PRE_DEMOS_MusicService_Cleanup",
+	"properties": {
+		"folder": {
+			"name": "Music Service"
+		},
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "DemoPool",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 2,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"synapse_widget": {
+				"version": "0.1"
+			},
+			"kernelspec": {
+				"name": "synapse_pyspark",
+				"display_name": "Synapse PySpark"
+			},
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/04bd17bd-fb60-43b0-ab6d-d660321e6a83/resourceGroups/synapse/providers/Microsoft.Synapse/workspaces/warnersynapse/bigDataPools/DemoPool",
+				"name": "DemoPool",
+				"type": "Spark",
+				"endpoint": "https://warnersynapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/DemoPool",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "2.4",
+				"nodeCount": 5,
+				"cores": 4,
+				"memory": 28,
+				"automaticScaleJobs": false
+			},
+			"sessionKeepAliveTimeout": 30
+		},
+		"cells": [
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\r\n",
+					"USE MusicService"
+				],
+				"execution_count": 3
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"outputs_hidden": false
+					}
+				},
+				"source": [
+					"spark.sql(\"DROP TABLE cosmostrendingartists\")\r\n",
+					"spark.sql(\"DROP TABLE platform_artist_performance\")\r\n",
+					"spark.sql(\"DROP TABLE user_details\")\r\n",
+					"spark.sql(\"DROP TABLE userartistplays_unmgd\")\r\n",
+					"spark.sql(\"DROP TABLE usersartistplays_4buckets\")\r\n",
+					"spark.sql(\"DROP TABLE usersartistplays_partitioned\")\r\n",
+					"spark.sql(\"DROP VIEW vw_userdetailspercountry\")\r\n",
+					"spark.sql(\"DROP VIEW vw_userdetailspercountry2\")"
+				],
+				"execution_count": 6
+			}
+		]
+	}
+}

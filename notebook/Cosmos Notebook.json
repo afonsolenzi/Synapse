@@ -1,0 +1,149 @@
+{
+	"name": "Cosmos Notebook",
+	"properties": {
+		"folder": {
+			"name": "Other Notebooks"
+		},
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "DemoPool",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 2
+		},
+		"metadata": {
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/04bd17bd-fb60-43b0-ab6d-d660321e6a83/resourceGroups/synapse/providers/Microsoft.Synapse/workspaces/warnersynapse/bigDataPools/DemoPool",
+				"name": "DemoPool",
+				"type": "Spark",
+				"endpoint": "https://warnersynapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/DemoPool",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "2.4",
+				"nodeCount": 3,
+				"cores": 4,
+				"memory": 28
+			}
+		},
+		"cells": [
+			{
+				"cell_type": "code",
+				"metadata": {
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null,
+							"table": {
+								"rows": [],
+								"schema": {}
+							}
+						},
+						"isSql": true
+					}
+				},
+				"source": [
+					"%%sql\n",
+					"\n",
+					"create database cosmoslinks"
+				],
+				"execution_count": 2
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"%%sql\n",
+					"use cosmoslinks;\n",
+					"-- Create a Spark table over Cosmos DB analytical store\n",
+					"-- To select a preferred list of regions in a multi-region Cosmos DB account, add spark.cosmos.preferredRegions '<Region1>,<Region2>' in the config options\n",
+					"\n",
+					"create table CosmosMachines using cosmos.olap options (\n",
+					"    spark.synapse.linkedService 'CosmosDb_CDemos',\n",
+					"    spark.cosmos.container 'Machines'\n",
+					");"
+				],
+				"attachments": null,
+				"execution_count": 6
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"machineName",
+								"factoryName"
+							],
+							"values": [
+								"avg(Temperature)"
+							],
+							"yLabel": "avg(Temperature)",
+							"xLabel": "machineName,factoryName",
+							"aggregation": "SUM",
+							"aggByBackend": false,
+							"series": "factoryName",
+							"isValid": true,
+							"inValidMsg": null
+						},
+						"aggData": "{\"Japan\":{\"m1,Canada\":0,\"m1,Japan\":33.28848994166666},\"Canada\":{\"m1,Canada\":55.645442775000014,\"m1,Japan\":0}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null,
+							"table": {
+								"rows": [
+									{
+										"machineName": "m1",
+										"factoryName": "Japan",
+										"avg(Temperature)": 33.28848994166666
+									},
+									{
+										"machineName": "m1",
+										"factoryName": "Canada",
+										"avg(Temperature)": 55.645442775000014
+									}
+								],
+								"schema": {
+									"machineName": "string",
+									"factoryName": "string",
+									"avg(Temperature)": "double"
+								}
+							}
+						},
+						"isSql": true
+					}
+				},
+				"source": [
+					"%%sql\n",
+					"\n",
+					"SELECT machineName, factoryName, avg(Temperature) \n",
+					"FROM CosmosMachines\n",
+					"GROUP BY factoryName, machineName"
+				],
+				"execution_count": 1
+			}
+		]
+	}
+}

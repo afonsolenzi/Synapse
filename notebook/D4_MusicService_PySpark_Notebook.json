@@ -1,0 +1,324 @@
+{
+	"name": "D4_MusicService_PySpark_Notebook",
+	"properties": {
+		"folder": {
+			"name": "Music Service"
+		},
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "DemoPool",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 2,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/04bd17bd-fb60-43b0-ab6d-d660321e6a83/resourceGroups/synapse/providers/Microsoft.Synapse/workspaces/warnersynapse/bigDataPools/DemoPool",
+				"name": "DemoPool",
+				"type": "Spark",
+				"endpoint": "https://warnersynapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/DemoPool",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "2.4",
+				"nodeCount": 5,
+				"cores": 4,
+				"memory": 28
+			}
+		},
+		"cells": [
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Load up a data frame to get started\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"spark.catalog.currentDatabase()"
+				],
+				"execution_count": 1
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"spark.catalog.setCurrentDatabase(\"MusicService\")"
+				],
+				"execution_count": 2
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"user_details_df = spark.table(\"user_details\")\n",
+					"user_details_df.printSchema()\n",
+					"user_details_df.count()"
+				],
+				"execution_count": 8
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"sqlContext.clearCache()"
+				],
+				"execution_count": 7
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Try out more methods\n",
+					""
+				]
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Quick analysis\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"diagram": {
+						"activateDiagramType": 3,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"Country"
+							],
+							"isValid": true,
+							"inValidMsg": null
+						},
+						"aggData": "{\"Country\":{\"United States\":66763,\"other\":36415,\"Germany\":31547,\"United Kingdom\":29779,\"Poland\":20920,\"Russian Federation\":19771,\"Brazil\":14465,\"Sweden\":13086,\"Spain\":13006,\"Finland\":11556,\"Netherlands\":9624,\"Canada\":8645,\"France\":7503,\"Italy\":7492,\"Australia\":7113,\"Japan\":6598,\"Turkey\":6429,\"Norway\":5143,\"Mexico\":4811,\"Czech Republic\":4764,\"Ukraine\":4384,\"Belgium\":3794,\"Portugal\":3189,\"Switzerland\":3040,\"Bulgaria\":2794,\"Austria\":2784,\"Chile\":2774,\"Argentina\":2626,\"Romania\":2622,\"Denmark\":2502,\"Hungary\":1982}}",
+						"isSummary": true,
+						"previewData": {
+							"filter": null
+						},
+						"summaryInfo": {
+							"name": "Country",
+							"count": 357921,
+							"missing": 0,
+							"type": "string",
+							"unique": 239
+						},
+						"statistics": {
+							"max": "Zimbabwe",
+							"min": "Afghanistan",
+							"mean": "null",
+							"stddev": "null"
+						},
+						"isSql": false
+					}
+				},
+				"source": [
+					"display(user_details_df, summary = True)"
+				],
+				"execution_count": 9
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"user_details_df.filter(\"UserID is not null\").count()"
+				],
+				"execution_count": 13
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Sort the df\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"from pyspark.sql import functions as F\n",
+					"user_details_df.sort(F.asc(\"Age\")).show(10)"
+				],
+				"execution_count": 15
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Renaming a column\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"user_details_df = user_details_df.withColumnRenamed(\"Country\",\"Nation\")\n",
+					"user_details_df.printSchema()"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Joining dataframes\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"artist_plays = spark.read.load('abfss://synapse@warnerdatalake.dfs.core.windows.net/musicdata/userartistplays.parquet', format='parquet')\n",
+					"artist_plays.printSchema()"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"from pyspark.sql.functions import broadcast\n",
+					"apjoin=artist_plays.join(broadcast(user_details_df),artist_plays.UserID==user_details_df.UserID,how=\"inner\").limit(10)\n",
+					"apjoin.show()"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"apjoin.select(\"ud.UserID\").show()"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"from pyspark.sql.functions import broadcast\n",
+					"ap = artist_plays.alias(\"ap\")\n",
+					"ud = user_details_df.alias(\"ud\")\n",
+					"apjoin=ap.join(broadcast(ud),ap.UserID==ud.UserID,how=\"inner\").limit(10)\n",
+					"apjoin.show()"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Grouping\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"from pyspark.sql.functions import avg, count, min, max\n",
+					"user_details_df.where(\"Gender == 'f'\").groupBy([\"Gender\",\"Nation\"]).agg(avg(\"Age\") ,max(\"Age\"), min(\"Age\"),count(\"Age\").alias(\"userCount\")).show()"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Windowing functions \n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"from pyspark.sql.window import Window\n",
+					"\n",
+					"windowSpec = Window().partitionBy(['Country']).orderBy(F.desc('Age'))\n",
+					"user_details_df.withColumn(\"rank\",F.rank().over(windowSpec)).show()"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Filter on multiple conditions\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"from pyspark.sql.functions import col\n",
+					"user_details_df.filter((col(\"Age\") >= 20) & (col(\"Age\") <= 30) & (col(\"Nation\") =='Italy') & ~(col(\"Gender\") == 'm')).show()"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Adding a column\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"import pyspark.sql.functions as F\n",
+					"user_details_df = user_details_df.withColumn(\"SignupYear\", F.year(F.col(\"SignupDate\")))\n",
+					"user_details_df.show()"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Evaluating multiple conditions (CASE)\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"import pyspark.sql.functions as F\n",
+					"user_details_df.withColumn(\"AgeBracker\",F.when(F.col(\"Age\") < 18,\"Minor\")\n",
+					"                                         .when((F.col(\"Age\") >= 18) & (F.col(\"Age\") < 60),\"Adult\")\n",
+					"                                         .otherwise(\"Senior\")).show()"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Using external functions\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"import pyspark.sql.functions as F\n",
+					"from pyspark.sql.types import *\n",
+					"\n",
+					"def minorOrAdult(Age):\n",
+					"    if Age < 18: \n",
+					"        return 'Minor'\n",
+					"    elif Age >= 18 and Age < 60:\n",
+					"        return 'Adult'\n",
+					"    else:\n",
+					"        return 'Senior'\n",
+					"    \n",
+					"minorOrAdult = F.udf(minorOrAdult, StringType())\n",
+					"user_details_df = user_details_df.withColumn(\"AgeBracket\", minorOrAdult(\"Age\"))\n",
+					"user_details_df.show()"
+				],
+				"execution_count": null
+			}
+		]
+	}
+}

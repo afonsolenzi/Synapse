@@ -1,0 +1,145 @@
+{
+	"name": "D5_MusicService_SynapseConnector_Notebook",
+	"properties": {
+		"folder": {
+			"name": "Music Service"
+		},
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "DemoPool",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 2,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"synapse_widget": {
+				"version": "0.1"
+			},
+			"kernelspec": {
+				"name": "synapse_spark",
+				"display_name": "Synapse Spark"
+			},
+			"language_info": {
+				"name": "scala"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/04bd17bd-fb60-43b0-ab6d-d660321e6a83/resourceGroups/synapse/providers/Microsoft.Synapse/workspaces/warnersynapse/bigDataPools/DemoPool",
+				"name": "DemoPool",
+				"type": "Spark",
+				"endpoint": "https://warnersynapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/DemoPool",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "2.4",
+				"nodeCount": 5,
+				"cores": 4,
+				"memory": 28,
+				"automaticScaleJobs": false
+			},
+			"sessionKeepAliveTimeout": 30
+		},
+		"cells": [
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## The connector only works in Scala\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"spark.read.synapsesql(\"SQLDW.musicService.UserDetails\").createOrReplaceTempView( \"udetails_vw\" )"
+				],
+				"execution_count": 1
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## We can use the view to interop\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"UserID"
+							],
+							"values": [
+								"Age"
+							],
+							"yLabel": "Age",
+							"xLabel": "UserID",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{\"Age\":{\"3ae3282ab0701d70e9cc6ce7823361fb3c36b001\":20,\"3ae42f84a326f9f070503f144ea1fc9490da5b1a\":23,\"3ae58ba74359455e773938f84c540567f3d0443b\":17,\"3ae6d08d3255b9b4c05e606be834f752eb96ec91\":17,\"3ae84b0aa3a25e7e294e969597ddc8d7c20c47f3\":24,\"3ae97a36a4e7c968a61d2303aa555795bc3e97ff\":21,\"3aeaf59ab157cbd7fa718e55e85885fb669d7cca\":24,\"3aeba468a010a6d3fc96e78440bb803d52009a8f\":13,\"3aeca749aa2623425dde77a735dcabb05338ecaa\":20,\"3aee8a3948a2bd0435d4ffe126682af55884abb7\":28,\"3aefbb20419a65c419e4e2c33cd7cfddc1178df1\":24,\"3af058effa9cde9ac1afb58f4734061e6e14eba0\":27,\"3af0f82dec3860b9bcc06f6e8635e7cfecdf64d8\":20,\"3af13b6d63a30b403dc91f195e23d7daece97719\":28,\"3af145ac98eac33751333c40ffd6d3f92008f596\":44,\"3af1648dc6119895aa29c51e5f1c28f9578ec85d\":23,\"3af18a21bf310f51f2cea712696d5fd52eaa4cbf\":20,\"3af1ab34cbc2a564beb34088c1aede3913e00449\":19,\"3af1ad499148407431a91eaecac988ac9c21dadf\":13,\"3af1d526295fe6c79749a0bb0ba1c2a2b21a895d\":21,\"3af1fa590b8fd52a72b265966fee7d689ca6f1d5\":25,\"3af242376ed8d2bd468cf3c3bb10facb2fe9ee7e\":20,\"3af24bb5bbc8d0cde15f7156f06fbea95d17f889\":24,\"3af273245b879ea31e89d7af13c6cbaea9b16d87\":24,\"3af2c7ec2fa79454cee4879a08e2aff150c1e7d9\":26,\"3af32a6899956c66bcf31c0088e46162cdf34471\":29,\"3af3b460710eb6be84449af7830a35501b486496\":27,\"3af3be357dcae883bb9cd169970d8037e977db41\":24,\"3af3bf90112e77c0c1bff13f86fb587809b42010\":45,\"3af4460b389d0cc2acee64c9cab0ede4603b1a5e\":20,\"3af4474ab783baa63f9a875a49b06282a53a5cf0\":33,\"3af45cd3e030e84abc4a534261e7364cf6b45721\":24,\"3af4873b6203db66561b769a921b61a6b54622f6\":24,\"3af4de66c842058533a287f950296617c0190991\":27,\"3af54b0d8ee3d5959152bf20feb83542a692f3e8\":20,\"3af5652b7ccf07ea639c7b30859745d2e2fcf29b\":25,\"3af56b819a723564303fa201342b1f1bb58522d6\":39,\"3af58fefca5df2d49fff201b11f27fed5b87011a\":20,\"3af603b4c0f44ab25baa0ccfb89241425ee5f4b4\":21,\"3af683f7a28eb12b337419672a04c3b3f5477b25\":26,\"3af723b640e0a11a8c2bdb98aa3c3c1ea523612e\":23,\"3af780aba13c934f9f729cffc4748accb2de1170\":23,\"3af7876d5ee6d57a6fd5fe3139ef62267a4209ba\":18,\"3af799a07b522f115a32da1c9e3f9541d53e4220\":20,\"3af7a1fede5660f52e21c924f1e92a1e317ba0b7\":21,\"3af7bd64aa08df6dc45506b1e24e0a335de8a16e\":20,\"3af80e3184df35d295755e651cdaef641f74c82f\":17,\"3af82b07290e88c83e37cba1bef688dfc91afd76\":20,\"3af862e22b2d5d5dce1ac3e25fe457f11bd58e77\":20,\"3af872b59dab8bc4a2e6621ff13419987ad2ed3f\":18,\"3af8a560e1a159a3f726cc54cdc43fd994d7a474\":20,\"3af8a59d922536a36ea22428680e15139d0d5d67\":20,\"3af8c4a549f720e6fccd4835d383a20abdaf92df\":20,\"3af8ce6fb01ecfc95a706ce73c551bfa7db0b210\":26,\"3af8d7a542ffd285bb2ddb5dc8c8b3b3d5f6fd9a\":22,\"3af8d901fd4091f1a439e8289740ba08dadea862\":20,\"3af90b34f0a46f2e65e14902186c05bd0f4b1fd0\":20,\"3af944e4cb0915e365abf56fb2d376effc274bae\":26,\"3af9fa373185412efa5602bde3817986a4ca1d03\":25,\"3afa0348d07c8d896a3815c95e41c638ebf12ac0\":23,\"3afa3cf4972df6383946a31ec2d4db3ad26b1577\":29,\"3afa620a78d38ebae8552cab16b9e0806d763dc0\":20,\"3afaba96fe4ba27552ccbb8040196b348bf3eb8a\":20,\"3afad1657c5e55d0086885b412d106f053552564\":51,\"3afb0895767811df4affceda09aa3abd3ffcfda6\":33,\"3afb13348f5154cbaa5504b5259672d48a695175\":20,\"3afb8ba2baec338b064a244e1a7cb4d5e5eb7dcb\":18,\"3afbada893f008edfbea4517e815730fd2d7a5f5\":24,\"3afbb797d853d558c0624a382588fd1c27e43490\":29,\"3afbe96a1676a2e67a959c778bbc1e6ce0f7aaa5\":30,\"3afbfd157f28e3b6f404816561feb47960aee841\":35,\"3afc210379180147c772905014ad0d1e8c543c8d\":19,\"3afc3653b78c2cedf122f95d99626d9d043a7f5b\":27,\"3afc844c6a8f7e7da8f0c7621be76446b6c25682\":35,\"3afc87497039fb0848daf48520e60306614989d1\":36,\"3afcee232749154d5e8ff3fe812fa8f6e54fa72d\":28,\"3afd00795cd269b8db30ff42781f7de1cf0ded82\":20,\"3afd03c729e1d5418da457d4468e3844115125eb\":20,\"3afd1b7e0f896edbca7d4541829dceed4dd76bc7\":11,\"3afd3a0a64f69ea5ab4e098898d30692a90e6cd0\":22,\"3afd69e7fe5c6d7c27cedfcabe7a5bbfb0f58581\":18,\"3afd9563d7abdac0ab816859fd930663f386df6b\":21,\"3afd9cb58f6a519b292e7eea0ee3bfd9f4acc63c\":20,\"3afdbcc79ce53a38b1223d5a72ad4893a9c65678\":29,\"3afde91e2c9892528ff96ba748f93190bee28663\":20,\"3afe1c7eae7f728716d734e89add1a587162abaa\":20,\"3afe4bb7835472cb33d32637ddc7273b4d40a765\":20,\"3afe79b21fa394cb2c52f0b5a5af486f3ba72fdf\":28,\"3afe8f332a6bee576fa368e1d218941fd0a569f2\":21,\"3afe99f4b278cb6e69139ae9363931e097bd4e1c\":20,\"3afeb1915a17d3647fc1f688079d3c27f2e1b038\":24,\"3afebd87a8d6889db96d691f4069d3cb9e5cee24\":38,\"3afebf2dc1cf7a149f353134f563b8778fd3eb75\":21,\"3aff0c8dab229d492407861a40fcfd10364a08d2\":20,\"3aff2c18485891cd957c9d83aa76102260b74aa4\":28,\"3affc89ae40a06f5d3a2d48dfbe02a30cfa596d2\":21,\"3affd3d7755d10be3521f3d6e2b000f70ac46428\":20,\"3b005c530ce443318afc8e59b3dab655ef91f3be\":27,\"3b00928f94240fd592a4ce60ce9c18e63582e913\":20,\"3b00b4b32972fc8ef200834a17c32e8c8313248b\":25}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"SELECT * FROM udetails_vw\n",
+					"LIMIT 100"
+				],
+				"execution_count": 2
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "python"
+					}
+				},
+				"source": [
+					"%%pyspark\n",
+					"filtereddf = spark.sql(\"SELECT * FROM udetails_vw\").filter(\"Country = 'Canada'\")\n",
+					"filtereddf.createOrReplaceTempView( \"udetailsvw_Canada\" )\n",
+					"filtereddf.show()"
+				],
+				"execution_count": 3
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Use the view to write back with Scala again\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"val scala_df = spark.sqlContext.sql(\"select * from udetailsvw_Canada\")\n",
+					"scala_df.write.synapsesql(\"SQLDW.musicService.CanadianUsers\", Constants.INTERNAL)"
+				],
+				"execution_count": 4
+			}
+		]
+	}
+}

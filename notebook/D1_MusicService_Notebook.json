@@ -1,0 +1,2257 @@
+{
+	"name": "D1_MusicService_Notebook",
+	"properties": {
+		"folder": {
+			"name": "Music Service"
+		},
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "DemoPool",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 4,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "4",
+				"spark.dynamicAllocation.maxExecutors": "4"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"synapse_widget": {
+				"version": "0.1"
+			},
+			"kernelspec": {
+				"name": "synapse_pyspark",
+				"display_name": "Synapse PySpark"
+			},
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/04bd17bd-fb60-43b0-ab6d-d660321e6a83/resourceGroups/synapse/providers/Microsoft.Synapse/workspaces/warnersynapse/bigDataPools/DemoPool",
+				"name": "DemoPool",
+				"type": "Spark",
+				"endpoint": "https://warnersynapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/DemoPool",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "2.4",
+				"nodeCount": 5,
+				"cores": 4,
+				"memory": 28,
+				"automaticScaleJobs": false
+			},
+			"sessionKeepAliveTimeout": 30
+		},
+		"cells": [
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Create a Spark Database\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					}
+				},
+				"source": [
+					"%%sql\n",
+					"-- creating a database for logical organization\n",
+					"CREATE DATABASE IF NOT EXISTS MusicService"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Set the database as the session context\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"USE MusicService"
+				],
+				"execution_count": 23
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Using Python to list file system contents\n",
+					"Always good to get used to reading and referencing docs: https://hadoop.apache.org/docs/current/api/org/apache/hadoop/fs/FileStatus.html"
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"path = \"/musicdata/\"\n",
+					"fs = spark._jvm.org.apache.hadoop.fs.FileSystem.get(spark._jsc.hadoopConfiguration())\n",
+					"list_status = fs.listStatus(spark._jvm.org.apache.hadoop.fs.Path(path))\n",
+					"result = [file.getPath().getName() for file in list_status]\n",
+					"\n",
+					"for filename in result:\n",
+					"    print(filename)"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Inside Synapse you can find preconfigured Microsoft utilities\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"from notebookutils import mssparkutils\n",
+					"mssparkutils.fs.help()"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"files = mssparkutils.fs.ls('/musicdata/')\n",
+					"for file in files:\n",
+					"    print(file.name, file.isDir, file.isFile, file.path, file.size)"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"print(mssparkutils.env.getUserName())\n",
+					"print(mssparkutils.env.getUserId())\n",
+					"print(mssparkutils.env.getJobId())\n",
+					"print(mssparkutils.env.getWorkspaceName())\n",
+					"print(mssparkutils.env.getPoolName())\n",
+					"print(mssparkutils.env.getClusterId())"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Create Spark dataframes based on the files\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"# load data into a dataframe from Parquet\n",
+					"artist_plays = spark.read.load('abfss://synapse@warnerdatalake.dfs.core.windows.net/musicdata/userartistplays.parquet', format='parquet')\n",
+					"artist_plays.show()"
+				],
+				"execution_count": 2
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"# load data into a dataframe from csv\n",
+					"artist_ticket_sales = spark.read.load('/partnerData/artistTicketSales.csv', format='csv', header=True)\n",
+					"artist_ticket_sales.show()\n",
+					"artist_ticket_sales.printSchema()"
+				],
+				"execution_count": 3
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Display the data\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"diagram": {
+						"activateDiagramType": 2,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"ArtistName"
+							],
+							"values": [
+								"ticketSalesDollars"
+							],
+							"yLabel": "ticketSalesDollars",
+							"xLabel": "ArtistName",
+							"aggregation": "MAX",
+							"aggByBackend": false,
+							"isValid": true,
+							"inValidMsg": null
+						},
+						"aggData": "{\"ticketSalesDollars\":{\"311\":3272500,\"2 chainz\":9902500,\"2 door cinema club\":1615000,\"21 pilots\":9512500,\"3 doors down\":8050000,\"30 seconds to mars\":7270000,\"30h!3\":8342500,\"38 special\":9707500,\"3lau\":7367500,\"50 cent\":4052500,\"a great big world\":8440000,\"a track\":2005000,\"aaron tippin\":8830000,\"adam lambert\":6002500,\"adele\":6977500,\"adventure club\":7367500,\"afrojack\":3272500,\"against me\":6197500,\"airborne toxic event\":6880000,\"akon\":3857500,\"alabama shakes\":5125000,\"alanis morrisette\":737500,\"alesso\":7562500,\"alex clare\":5027500,\"alexis jordan\":2492500,\"alicia keys\":1420000,\"alien ant farm\":1517500,\"all american rejects\":4150000,\"all time low\":640000,\"allen stone\":7562500,\"aloe blacc\":3565000,\"american authors\":4735000,\"amerie\":2395000,\"anberlin\":3077500,\"andrew allen\":640000,\"andrew bird\":4637500,\"andrew mcmachon\":1322500,\"andrew wk\":3857500,\"andy grammer\":5320000,\"ani difranco\":9025000,\"anna kendrick\":7562500,\"anthony hamilton\":8830000,\"arcade fire\":2395000,\"arctic monkeys\":4442500,\"arrested development\":9317500,\"asap rocky\":6392500,\"ashanti\":7075000,\"asher roth\":7562500,\"atmosphere\":4247500,\"augustana\":9512500,\"austin mahone\":7075000,\"avenged sevenfold\":6490000,\"avicii\":640000,\"awolnation\":4345000,\"axwell\":3077500,\"b.o.b.\":737500,\"baby bash\":1127500,\"barenaked ladies\":7270000,\"bassnectar\":4832500,\"bastille\":8440000,\"bb king\":9317500,\"beenie man\":5612500,\"beirut\":6782500,\"ben folds\":5320000,\"ben harper\":7660000,\"ben kweller\":3370000,\"ben rector\":6880000,\"better than ezra\":1907500,\"between the trees\":9512500,\"big & rich\":6587500,\"big bad vodoo dadd\":6392500,\"big boi\":8927500,\"big gigantic\":4150000,\"big head todd & mo\":3467500,\"big sean\":9512500,\"billy currington\":9415000,\"billy ray cyrus\":2882500,\"biz markie\":4930000,\"black crowes\":4345000,\"black eyed peas\":4540000,\"blackberry smoke\":3272500,\"blake lewis\":6685000,\"blake shelton\":4150000,\"blaq audio\":4930000,\"blonde readhead\":1810000,\"blue october\":6295000,\"blues traveler\":8440000,\"bob dylan\":7855000,\"bob schneider\":3662500,\"bobby valentino\":8050000,\"bon jovi\":6100000,\"bone thugs & harmony\":2005000,\"bonnie raitt\":4832500,\"borgore\":1225000,\"bowling for soup\":542500,\"boys like girls\":5807500,\"brandi carlisle\":3662500,\"brandon flowers\":8245000,\"brantley gilbert\":4442500,\"breaking benjamin\":347500,\"breathe carolina\":1127500,\"bret michaels\":6002500,\"brett dennen\":9707500,\"britney spears\":4832500,\"broken bells\":1225000,\"broken social scene\":5320000,\"brooke valentine\":7465000,\"bruce hornsby\":8147500,\"bruce springsteen\":9805000,\"bruno mars\":9415000,\"busta rhymes\":8537500,\"c2c\":8245000,\"cage the elephant\":9122500,\"caifanes\":9415000,\"cake\":2687500,\"calvin harris\":2785000,\"candlebox\":5027500,\"capital cities\":5515000,\"carly rae jepsen\":8537500,\"carolina liar\":1322500,\"carrie underwood\":3662500,\"cartel\":9220000,\"cash money\":5710000,\"cat power\":9415000,\"cee lo green\":9512500,\"chamillionaire\":1225000,\"charlie daniels band\":6880000,\"charlie mars\":2200000,\"cheap trick\":4247500,\"cher lloyd\":1615000,\"chevelle\":7075000,\"chiddy bang\":7367500,\"childish gambino\":4150000,\"chingy\":6295000,\"chris botti\":2005000,\"chris brown\":640000,\"chris cagie\":5417500,\"chris cornell\":1615000,\"chris young\":3175000,\"chrisette michelle\":542500,\"christina aguilera\":4540000,\"christina milan\":9025000,\"christina perri\":9902500,\"chromeo\":5612500,\"chuck leavell\":6392500,\"churchill\":9805000,\"chvrches\":2882500,\"ciara\":4832500,\"circa survive\":8537500,\"citizen\":5027500,\"clap your hands say\":3077500,\"clay aiken\":3760000,\"clint black\":6490000,\"clipse\":932500,\"cloud cult\":4052500,\"clutch\":6002500,\"cobra starship\":9707500,\"coheed & cambria\":1810000,\"colbie callait\":4540000,\"colby odonis\":1810000,\"cold war kids\":3077500,\"coldplay\":8245000,\"collective soul\":3760000,\"colt ford\":9415000,\"common\":542500,\"coolio\":1030000,\"corey smith\":7075000,\"counting crows\":7952500,\"cowboy mouth\":1030000,\"cracker\":2687500,\"craig morgan\":8342500,\"creed\":347500,\"creedence clearwater revival\":5807500,\"crystal bowersox\":542500,\"cults\":8147500,\"cute is what we aim\":1810000,\"da brat\":1615000,\"damian marley\":9317500,\"danny brown\":5027500,\"danny gokey\":4930000,\"darius rucker\":4540000,\"daryl worley\":7757500,\"dashboard confessior\":8732500,\"daughtry\":5515000,\"dave matthews\":5807500,\"david archuletta\":7465000,\"david banner\":5125000,\"david cook\":1615000,\"david crosby & grah\":9317500,\"david gray\":9805000,\"david guetta\":9415000,\"de la soul\":5710000,\"deadmau5\":6977500,\"death cab for cutie\":250000,\"decemberists\":8732500,\"default\":4735000,\"demi lovato\":1127500,\"devotchka\":5320000,\"diamond rio\":7172500,\"dierks bentley\":4052500,\"dionne warwick\":1517500,\"disco biscuits\":6685000,\"dispatch\":445000,\"disturbed\":1030000,\"divine fits\":4247500,\"dj pauly d\":542500,\"dj red foo\":2882500,\"dj shadow\":7660000,\"don williams\":932500,\"drake\":3175000,\"drive by truckers\":1517500,\"drop city yacht club\":640000,\"dropkick murphys\":7757500,\"drowning pool\":2980000,\"duncan sheik\":6100000,\"dustin lynch\":6392500,\"eagles of death metal\":2200000,\"eaton corbin\":835000,\"ed shereen\":5320000,\"editors\":2980000,\"edward sharpe & ma\":4150000,\"edwin mccain\":5807500,\"eli young band\":6977500,\"ellie goulding\":4247500,\"elvis crespo\":5612500,\"emerson drive\":6782500,\"eric church\":1127500,\"eric hutchinson\":9707500,\"erykah badu\":9610000,\"eve 6\":4735000,\"everclear\":542500,\"everlast\":9902500,\"fabolous\":347500,\"faith evans\":6490000,\"faith hill\":6685000,\"fall out boy\":542500,\"family force five\":3370000,\"fantasia\":2980000,\"far east movement\":2785000,\"fastball\":835000,\"fat joe\":9415000,\"feed me\":6100000,\"feist\":3077500,\"filter\":3370000,\"finger eleven\":9415000,\"fitz & the tantrums\":4150000,\"five finger death pur\":1030000,\"five for fighting\":9415000,\"flo rida\":8050000,\"flobots\":1030000,\"flogging molly\":4345000,\"flyleaf\":5027500,\"fonseca\":8830000,\"foreigner\":640000,\"forever the sickest k\":6685000,\"fountains of wayne\":2882500,\"four year strong\":7855000,\"freelance whales\":2687500,\"french montana\":7367500,\"fuel\":9512500,\"future\":1907500,\"g. love\":3175000,\"galactic\":3077500,\"gary allan\":5417500,\"gaslight anthem\":9317500,\"gavin degraw\":7270000,\"george clinton\":8147500,\"ghostface\":932500,\"gin blossoms\":3760000,\"girl talk\":4345000,\"gloriana\":5125000,\"godsmack\":3955000,\"gogol bordello\":7465000,\"goldfinger\":4540000,\"gomez\":4735000,\"goo goo dolls\":5417500,\"gotye\":2492500,\"grace potter & noctu\":5125000,\"greenday\":7075000,\"gretchen wilson\":1810000,\"grizzly bear\":6977500,\"grouplove\":5222500,\"gucci mane\":2492500,\"gym class heroes\":2395000,\"gypsy kings\":3467500,\"hal ketchum\":2492500,\"hanson\":2297500,\"hellogoodbye\":9122500,\"holy ghost!\":9025000,\"hoobastank\":2005000,\"hot chelle rae\":8342500,\"howie day\":1030000,\"ice cube\":2200000,\"incubus\":9415000,\"india arie\":4637500,\"indigo girls\":8050000,\"ingrid michaelson\":2005000,\"j. holiday\":7562500,\"ja rule\":5320000,\"jack ingram\":8147500,\"jack' s mannequin\":3565000,\"jadakiss\":3857500,\"jake miller\":2102500,\"jakob dylan\":2492500,\"james blunt\":4345000,\"james otto\":3370000,\"janelle monae\":542500,\"jason derulo\":2980000,\"jason michael carroll\":7952500,\"jay sean\":7660000,\"jefferson starship\":5515000,\"jeremih\":5027500,\"jessica simpson\":347500,\"jet\":3565000,\"jewel\":9805000,\"jhene aiko\":9317500,\"jill scott\":2980000,\"jo dee messina\":2102500,\"joan jett\":3370000,\"john anderson\":6490000,\"john legend\":3955000,\"john mayer\":6295000,\"john newman\":2200000,\"john popper project\":6295000,\"john secada\":5027500,\"jon mclaughlin\":7757500,\"jonathan davis\":8342500,\"josh gracin\":2785000,\"josh groban\":4442500,\"josh thompson\":5125000,\"josh turner\":2005000,\"joshua radin\":7075000,\"juanes\":6197500,\"juicy j\":3760000,\"julian marley\":7270000,\"july talk\":8342500,\"junior doctor\":2297500,\"jurassic 5\":2395000,\"justin bieber\":6295000,\"justin moore\":4735000,\"justin nozuka\":4930000,\"justin timberlake\":9902500,\"k' naan\":3175000,\"kaiser chiefs\":1712500,\"kaki king\":1322500,\"kanye west\":5125000,\"karmin\":1225000,\"kaskade\":3272500,\"kate voegele\":8440000,\"katherine mcphee\":5417500,\"katy perry\":4150000,\"kc & sunshine band\":7562500,\"ke$ha\":7562500,\"keith anderson\":7172500,\"keith urban\":6002500,\"kelis\":1127500,\"kellie pickier\":4930000,\"kelly clarkson\":2785000,\"kelly rowland\":2687500,\"kendrick lamar\":3857500,\"kenny rogers\":4052500,\"kenny wayne shepherd\":5515000,\"kentucky headhunter\":6782500,\"keri hilson\":7465000,\"kevin rudolf\":5125000,\"keyshia cole\":2200000,\"kid cudi\":3760000,\"kid ink\":8050000,\"kid rock\":7270000,\"king chip the ripper\":1322500,\"kings of leon\":2492500,\"kip moore\":2687500,\"kongos\":640000,\"kopecky family banc\":445000,\"korn\":1712500,\"kreayshawn\":1810000,\"krewella\":9122500,\"kris allen\":5905000,\"la roux\":5807500,\"lady antebellum\":2200000,\"lady gaga\":1225000,\"lana del ray\":737500,\"larry gatlin\":2200000,\"le caslte vania\":4540000,\"leann rimes\":3370000,\"lee ann womack\":6587500,\"lee brice\":932500,\"lee dewyze\":6880000,\"less than jake\":1030000,\"lifehouse\":1615000,\"lights\":2297500,\"lil' wayne\":5710000,\"linkin park\":8342500,\"lit\":5612500,\"little big town\":5515000,\"ll cool j\":1615000,\"lloyd\":3565000,\"lmfao\":6392500,\"local natives\":1517500,\"logic\":4247500,\"lonestar\":5125000,\"lorde\":6685000,\"lorrie morgan\":8927500,\"los lobos\":6977500,\"los lonely boys\":9610000,\"lotus\":3077500,\"love & theft\":1615000,\"ludacris\":2200000,\"ludo\":737500,\"luke bryan\":8927500,\"lupe fiasco\":1712500,\"mac miller\":5417500,\"macklemore\":3857500,\"macy gray\":2200000,\"madonna\":3272500,\"marc broussard\":5027500,\"marc cohn\":5905000,\"mario\":9415000,\"mark wills\":6880000,\"maroon 5\":9317500,\"martina mcbride\":7270000,\"mat kearney\":7465000,\"matchbox 20\":9220000,\"matisyahu\":6587500,\"matt & kim\":4930000,\"matt nathanson\":5515000,\"max weinberg big be\":2882500,\"maxwell\":1322500,\"mayday parade\":7270000,\"merle haggard\":3955000,\"mgmt\":2102500,\"michael franti\":9512500,\"michael kiwanuka\":9415000,\"michelle branch\":3662500,\"mighty mighty bosstones\":9220000,\"miguel\":542500,\"miike snow\":8440000,\"mike gordon\":3662500,\"mike posner\":9415000,\"mims\":2590000,\"mindy smith\":8635000,\"minus the bear\":2492500,\"miranda lambert\":2492500,\"mobb deep\":6587500,\"moe\":4735000,\"mogwai\":2687500,\"montell jordan\":8830000,\"mord fustang\":9220000,\"morrissey\":3077500,\"motion city soundtrack\":2005000,\"mumford & sons\":2005000,\"muse\":3272500,\"musiq\":5807500,\"mute math\":4442500,\"myth busters\":5515000,\"n. miss all-stars\":6587500,\"nas\":2687500,\"naturally 7\":1127500,\"ne-yo\":3857500,\"needtobreathe\":2297500,\"neon trees\":2395000,\"nerd\":6977500,\"nervo\":6197500,\"new boyz\":7660000,\"nickel creek\":9512500,\"nicki minaj\":932500,\"nickleback\":7172500,\"nitty gritty dirt band\":3760000,\"no doubt\":9122500,\"noah & the whale\":6490000,\"norah jones\":640000,\"oar\":4832500,\"odd future\":5125000,\"of monsters & men\":9317500,\"ofmontreal\":2980000,\"ok go\":8635000,\"old 97's\":9317500,\"olly murs\":2785000,\"one direction\":9025000,\"one republic\":7660000,\"owl city\":1030000,\"ozomatli\":4637500,\"p.o.d.\":1030000,\"pam tillis\":5612500,\"panic! at the disco\":737500,\"paolo nutini\":9805000,\"papa roach\":6782500,\"parachute\":8927500,\"paramore\":2687500,\"passenger\":250000,\"passion pit\":3175000,\"pat benatar\":9707500,\"pat green\":2687500,\"pat travers\":2102500,\"paul wall\":5027500,\"pearl jam\":5905000,\"pepper\":5125000,\"perpetual groove\":6880000,\"pharrell williams\":8050000,\"phil vassar\":4247500,\"phillip phillips\":9025000,\"phoenix\":8245000,\"pitbull\":6100000,\"plain white ts\":6197500,\"pleasure p\":7367500,\"plies\":445000,\"portugal the man\":542500,\"presidents of the usa\":2980000,\"pretty lights\":4735000,\"psy\":8147500,\"public enemy\":3760000,\"puddle of mudd\":2980000,\"q-tip\":5905000,\"queens of the stone age\":8537500,\"quiet riot\":1225000,\"r3hab\":9610000,\"ra ra riot\":2785000,\"raki m\":8342500,\"rascal flatts\":3565000,\"ray price\":7562500,\"rebirth brass band\":5027500,\"red\":2687500,\"red jumpsuit apparat\":542500,\"redlight king\":5515000,\"redman/methodman\":640000,\"reel big fish\":4832500,\"regina spektor\":8927500,\"relient k\":1030000,\"rev theory\":3175000,\"rhett atkins\":1420000,\"rick ross\":542500,\"rick springfield\":4735000,\"rihanna\":9902500,\"rise against\":5417500,\"rob thomas\":5027500,\"robert randolph\":7757500,\"robin thicke\":4442500,\"rogue wave\":1030000,\"rooney\":1615000,\"rufus wainright\":250000,\"rusted root\":1810000,\"sam moore\":1712500,\"sammy adams\":9415000,\"santigold\":2005000,\"sara bareilles\":2980000,\"sara evans\":7172500,\"saving abel\":2005000,\"say anything\":2590000,\"schoolboy q\":9512500,\"sea wolf\":4345000,\"sean kingston\":8050000,\"sebastian ingrosso\":445000,\"secondhand serenade\":7172500,\"seether\":8830000,\"selena gomez\":1322500,\"sevendust\":1127500,\"sevyn streeter\":4832500,\"shakira\":3857500,\"shawn mullins\":1810000,\"she wants revenge\":4735000,\"shedaisy\":8830000,\"sheryl crow\":3272500,\"shinedown\":2882500,\"shooter jennings\":3175000,\"shwayze\":5807500,\"sick puppies\":2200000,\"silversun pickups\":445000,\"simple plan\":1517500,\"sister hanl\":9317500,\"skillet\":3857500,\"slash\":7660000,\"sleigh bells\":4150000,\"slightly stoopid\":250000,\"slipknot\":1810000,\"slum village\":3370000,\"smash mouth\":7270000,\"smashing pumpkins\":5515000,\"snoop dog/lion\":2785000,\"snow patrol\":6880000,\"solange knowles\":1615000,\"soul asylum\":8050000,\"soulja boy\":3857500,\"spearhead\":2492500,\"spoon\":835000,\"st. lucia\":9317500,\"st. vincent\":3955000,\"staind\":1907500,\"state radio\":5612500,\"steel train\":542500,\"steve aoki\":3760000,\"steve martin & steep\":3077500,\"steve miller band\":9707500,\"steven marley\":6295000,\"stockholm syndrome\":6392500,\"stone temple pilots\":2785000,\"story of the year\":6880000,\"sublime w/ rome\":9220000,\"sugar ray\":9902500,\"sugarcult\":5320000,\"sugarland\":1810000,\"sum 41\":2882500,\"susan boyle\":6880000,\"switchfoot\":3467500,\"t-pain\":5515000,\"taio cruz\":7757500,\"taking back sunday\":7562500,\"talib kweli\":7952500,\"taylor swift\":640000,\"terri clark\":8635000,\"the avett bros\":9220000,\"the band perry\":8830000,\"the bravery\":445000,\"the civil wars\":5417500,\"the dandy warhols\":4735000,\"the dream\":5417500,\"the flaming lips\":2590000,\"the fray\":7562500,\"the game\":9122500,\"the killers\":5710000,\"the lumineers\":542500,\"the national\":640000,\"the neighborhood\":347500,\"the offspring\":6977500,\"the roots\":8050000,\"the script\":4832500,\"the sheepdogs\":5125000,\"the starting line\":5612500,\"the temper trap\":3077500,\"the ting tings\":6197500,\"the wailers\":5417500,\"the wallflowers\":2785000,\"the wanted\":4247500,\"theory of a deadman\":3077500,\"third eye blind\":6977500,\"thompson square\":5612500,\"three 6 mafia\":9707500,\"three days grace\":932500,\"tiesto\":3272500,\"tim mcgraw\":1615000,\"timeflies\":2590000,\"toby keith\":737500,\"toby mac\":8635000,\"toots & the maytals\":4832500,\"tori amos\":2687500,\"tracy lawrence\":1907500,\"train\":5417500,\"travie mccoy\":3370000,\"travis porter\":1225000,\"travis tritt\":8050000,\"trey songz\":347500,\"trisha year-wood\":9902500,\"trombone shorty\":2785000,\"tyga\":2785000,\"tyler the creator\":4832500,\"umphree's mcgee\":8830000,\"usher\":5612500,\"vampire weekend\":4930000,\"vertical horizon\":1225000,\"waka flocka flame\":6977500,\"wale\":6685000,\"walk off the earth\":4442500,\"walk the moon\":4735000,\"weezer\":2492500,\"white panda\":4247500,\"wild cub\":7952500,\"willie nelson\":8147500,\"wiz khalifa\":2785000,\"wyclef\":640000,\"xzibit\":6587500,\"yeasayer\":4637500,\"yelawolf\":1030000,\"yo gotti\":5125000,\"young jeezy\":3955000,\"young the giant\":7270000,\"zac brown band\":737500,\"ziggy marley\":1420000}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": false
+					},
+					"collapsed": false
+				},
+				"source": [
+					"display(artist_ticket_sales)"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"## You can convert into a Pandas (single-node) dataframe and use that library"
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"ats_pandas = artist_ticket_sales.toPandas()\n",
+					"ats_pandas.describe()"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## You can add Python libraries to your cluster\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"import pkg_resources\n",
+					"for d in pkg_resources.working_set:\n",
+					"     print(d)"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"from pandas_profiling import ProfileReport\n",
+					"\n",
+					"profile = ProfileReport(ats_pandas, title='Artist Tickets - Pandas Profiling Report', explorative=True)\n",
+					"displayHTML(profile.to_html())"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"htmlvariable=profile.to_html()\n",
+					"htmlrdd = sc.parallelize([htmlvariable])\n",
+					"htmlrdd.saveAsTextFile(\"/musicdata/output/profilingreport\")"
+				],
+				"execution_count": 12
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"## But what about output to a single file?"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
+					"htmlrdd.coalesce(1).saveAsTextFile(\"/musicdata/output/profilingreportsingle\")"
+				],
+				"execution_count": 13
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"## Writing an exact file is usually handled through platform or OS commands"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
+					"from notebookutils import mssparkutils\r\n",
+					"mssparkutils.fs.put(\"/musicdata/output/profilingreportsingle.html\", htmlvariable, True)"
+				],
+				"execution_count": 14
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Specify a schema to apply to the file"
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"#specify the schema\n",
+					"from pyspark.sql.types import *\n",
+					"\n",
+					"customSchema = StructType([\n",
+					"    StructField(\"UserID\", StringType(), True),        \n",
+					"    StructField(\"Gender\", StringType(), True),\n",
+					"    StructField(\"Age\", IntegerType(), True),\n",
+					"    StructField(\"Country\", StringType(), True),\n",
+					"    StructField(\"SignupString\", StringType(), True),\n",
+					"])\n",
+					"\n",
+					"user_details = spark.read.load('abfss://synapse@warnerdatalake.dfs.core.windows.net/musicdata/UserDetails.csv', \n",
+					"format=\"csv\", header=\"true\", sep=',', schema=customSchema)"
+				],
+				"execution_count": 15
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Check schema\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"user_details.printSchema()"
+				],
+				"execution_count": 16
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Check contents\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"user_details.show(20)"
+				],
+				"execution_count": 17
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"## Convert the Signup string to a real date"
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"from pyspark.sql.functions import to_date\n",
+					"\n",
+					"user_details_conv = user_details.withColumn('SignupDate',to_date(user_details.SignupString, 'MMM dd, yyyy'))\n",
+					"#below is the result\n",
+					"user_details_conv.printSchema()\n",
+					"user_details_conv.select('SignupString','SignupDate').show(10,False)"
+				],
+				"execution_count": 18
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"## Limit actually returns a dataframe"
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"user_details_conv.limit(20).show()"
+				],
+				"execution_count": 19
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					}
+				},
+				"source": [
+					"user_details_conv.select(\"UserID\",\"Gender\",\"Age\",\"Country\",\"SignupDate\").write.saveAsTable(\"user_details\")"
+				],
+				"execution_count": 20
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Let's try JSON data\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"df = spark.read.load('abfss://synapse@warnerdatalake.dfs.core.windows.net/musicdata/UserDetails.json', format='json')\n",
+					"display(df.limit(10))"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Problem is, from the Spark docs:\n",
+					"\"Each line must contain a separate, self-contained valid JSON object.\"\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"user_details_json = spark.read.option(\"multiline\",\"true\").json(\"abfss://synapse@warnerdatalake.dfs.core.windows.net/musicdata/UserDetails.json\")\n",
+					"user_details_json.printSchema()"
+				],
+				"execution_count": 22
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"from pyspark.sql.functions import explode\n",
+					"\n",
+					"user_details_json_flat = user_details_json.select(explode('ServiceUsers').alias('users_flat'))\n",
+					"user_details_json_flat.show(5)\n",
+					"user_details_json_flat.printSchema()"
+				],
+				"execution_count": 23
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"from pyspark.sql.functions import col\n",
+					"user_details_tabular = user_details_json_flat.select(col(\"users_flat.UserID\").alias(\"UserID\"),col(\"users_flat.Age\").alias(\"Age\"),col(\"users_flat.Country\").alias(\"Country\"))\n",
+					"user_details_tabular.show(10)"
+				],
+				"execution_count": 24
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Can Spark do XML!!??\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"user_details_xml = spark.read.text(\"abfss://synapse@warnerdatalake.dfs.core.windows.net/musicdata/UserDetails.xml\", wholetext=True)\n",
+					"user_details_xml.printSchema()\n",
+					"user_details_xml.show()\n",
+					""
+				],
+				"execution_count": 25
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"xmltext = user_details_xml.head()[0]\n",
+					"xmltext[0:100]"
+				],
+				"execution_count": 26
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"import xml.etree.ElementTree as ET\n",
+					"from itertools import islice\n",
+					"\n",
+					"root = ET.fromstring(xmltext)\n",
+					"\n",
+					"for child in islice(root, 5):\n",
+					"    print(child.tag, child.attrib)\n",
+					"\n",
+					"print(\"One user:\" + root[0].get(\"UserID\"))\n",
+					""
+				],
+				"execution_count": 27
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"users = []\n",
+					"for index, child in enumerate(root):\n",
+					"    user = [child.get(\"UserID\"),child.get(\"Gender\"),child.get(\"Age\"),child.get(\"Country\"),child.get(\"SignupString\")]\n",
+					"    users.append(user)\n",
+					"\n",
+					"print(\"length of users array: \" + str(len(users)))"
+				],
+				"execution_count": 28
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"dffromxml =  spark.createDataFrame(users, [\"UserID\",\"Gender\",\"Age\",\"Country\",\"SignupString\"])\n",
+					"dffromxml.printSchema()\n",
+					"dffromxml.show()\n",
+					""
+				],
+				"execution_count": 29
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Create local temp view\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"artist_plays.createOrReplaceTempView(\"user_artist_plays\")"
+				],
+				"execution_count": 5
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"UserID"
+							],
+							"values": [
+								"Plays"
+							],
+							"yLabel": "Plays",
+							"xLabel": "UserID",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{\"Plays\":{\"00000c289a1829a808ac09c00daf10bc3c4e223b\":968,\"00001411dc427966b17297bf4d69e7e193135d89\":19288}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"\n",
+					"SELECT * FROM user_artist_plays\n",
+					"LIMIT 10"
+				],
+				"execution_count": 6
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Make a global temp view\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"artist_plays.createOrReplaceGlobalTempView(\"user_artist_plays_global\")"
+				],
+				"execution_count": 7
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"UserID"
+							],
+							"values": [
+								"Plays"
+							],
+							"yLabel": "Plays",
+							"xLabel": "UserID",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{\"Plays\":{\"00000c289a1829a808ac09c00daf10bc3c4e223b\":968,\"00001411dc427966b17297bf4d69e7e193135d89\":19288}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"\n",
+					"SELECT * FROM global_temp.user_artist_plays_global\n",
+					"LIMIT 10"
+				],
+				"execution_count": 8
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Materialize results into managed table\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"# applying transformations\n",
+					"# saving the transforms into another dataframe and save as managed table\n",
+					"platform_artist_performance = spark.sql(\"\"\"\n",
+					"  SELECT Artist, SUM(Plays) AS total_plays\n",
+					"FROM user_artist_plays\n",
+					"GROUP BY Artist\n",
+					"ORDER BY SUM(Plays) DESC \n",
+					"\"\"\")\n",
+					"\n",
+					"platform_artist_performance.write.saveAsTable(\"platform_artist_performance\")"
+				],
+				"execution_count": 9
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"Artist"
+							],
+							"values": [
+								"total_plays"
+							],
+							"yLabel": "total_plays",
+							"xLabel": "Artist",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{\"total_plays\":{\"adventure club\":126,\"all american rejects\":477,\"brantley gilbert\":34,\"chuck leavell\":436,\"creedence clearwater revival\":1857999,\"minus the bear\":1895264,\"nitty gritty dirt band\":34,\"portugal the man\":98,\"stockholm syndrome\":516,\"toots & the maytals\":97}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"SELECT * FROM platform_artist_performance\n",
+					"LIMIT 10"
+				],
+				"execution_count": 10
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Writing unmanaged table\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"artist_plays.write.option('path', \"/musicdata/userartistplays_unmanaged/\").saveAsTable(\"userartistplays_unmgd\")"
+				],
+				"execution_count": 11
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"SELECT * FROM userartistplays_unmgd\n",
+					"LIMIT 10"
+				],
+				"execution_count": 12
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Get our db metadata\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"database"
+							],
+							"values": [
+								"database"
+							],
+							"yLabel": "database",
+							"xLabel": "database",
+							"aggregation": "COUNT",
+							"aggByBackend": false
+						},
+						"aggData": "{\"database\":{\"\":1,\"musicservice\":3}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"SHOW TABLES"
+				],
+				"execution_count": 13
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"col_name"
+							],
+							"values": [
+								"col_name"
+							],
+							"yLabel": "col_name",
+							"xLabel": "col_name",
+							"aggregation": "COUNT",
+							"aggByBackend": false
+						},
+						"aggData": "{\"col_name\":{\"\":1,\"# Detailed Table Information\":1,\"Artist\":1,\"Created By\":1,\"Created Time\":1,\"Database\":1,\"InputFormat\":1,\"Last Access\":1,\"Location\":1,\"OutputFormat\":1,\"Owner\":1,\"Provider\":1,\"Serde Library\":1,\"Statistics\":1,\"Storage Properties\":1,\"Table\":1,\"Table Properties\":1,\"Type\":1,\"total_plays\":1}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"DESCRIBE EXTENDED platform_artist_performance"
+				],
+				"execution_count": 14
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Let's DML on a Spark table\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"INSERT INTO platform_artist_performance VALUES ('NewArtist' ,0 )"
+				],
+				"execution_count": 15
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"INSERT INTO platform_artist_performance SELECT t.* FROM (SELECT 'NewArtist' Artist,0 total_plays) t"
+				],
+				"execution_count": 16
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"Artist"
+							],
+							"values": [
+								"total_plays"
+							],
+							"yLabel": "total_plays",
+							"xLabel": "Artist",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{\"total_plays\":{\"NewArtist\":0}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					}
+				},
+				"source": [
+					"%%sql\n",
+					"UPDATE platform_artist_performance set total_plays=1 where Artist='NewArtist'"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					}
+				},
+				"source": [
+					"%%sql\n",
+					"DELETE FROM platform_artist_performance where Artist='NewArtist'"
+				],
+				"execution_count": 18
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## In vanilla Spark overwriting is the only way to Update or Delete but that's a lot of work!\n",
+					""
+				]
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Partition the output\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"(artist_plays.write\n",
+					"  .partitionBy(\"Artist\")\n",
+					"  .mode(\"overwrite\")\n",
+					"  .saveAsTable(\"usersartistplays_partitioned\"))"
+				],
+				"execution_count": 22
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"artist_plays.select(\"Artist\").filter(\"Artist LIKE '%.%'\").distinct().show()"
+				],
+				"execution_count": 20
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"artist_plays = spark.sql(\"\"\"\n",
+					"SELECT UserID, CASE Artist \n",
+					"            WHEN 'p.o.d.' THEN 'p.o.d' \n",
+					"            WHEN 'b.o.b.' THEN 'b.o.b' \n",
+					"            ELSE Artist \n",
+					"            END as Artist, Plays FROM user_artist_plays\n",
+					"\"\"\")"
+				],
+				"execution_count": 21
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Try to partition again\n",
+					""
+				]
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Now we can delete or update by manipulating the partitions\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"from pyspark.sql.functions import lit\n",
+					"\n",
+					"artist_plays_clutch = spark.table(\"usersartistplays_partitioned\").where(\"Artist ='clutch'\")\n",
+					"artist_plays_clutch.show()\n",
+					"artist_plays_clutch = artist_plays_clutch.select(\"UserID\",lit(0).alias(\"Plays\"),\"Artist\")\n",
+					"artist_plays_clutch.show()\n",
+					"artist_plays_clutch.createOrReplaceTempView(\"artist_plays_clutch\")"
+				],
+				"execution_count": 24
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Write the new data for 'clutch'\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					}
+				},
+				"source": [
+					"%%sql\n",
+					"INSERT OVERWRITE TABLE usersartistplays_partitioned PARTITION (Artist = \"clutch\")\n",
+					"    SELECT UserID, Plays FROM artist_plays_clutch"
+				],
+				"execution_count": 25
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"CREATE TABLE artist_plays_clutch_temp\n",
+					"AS\n",
+					"SELECT * FROM artist_plays_clutch"
+				],
+				"execution_count": 26
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"INSERT OVERWRITE TABLE usersartistplays_partitioned PARTITION (Artist = \"clutch\")\n",
+					"    SELECT UserID, Plays FROM artist_plays_clutch_temp"
+				],
+				"execution_count": 27
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"UserID"
+							],
+							"values": [
+								"Plays"
+							],
+							"yLabel": "Plays",
+							"xLabel": "UserID",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{\"Plays\":{\"0000c176103e538d5c9828e695fed4f7ae42dd01\":0,\"001283166ef085991a611e3ccdd06cdcdba49bce\":0,\"001fe4b5069077a9032e0d0d6f9c068b8673c37e\":0,\"004b05cfb04c5f880470838adaf2a8d8b8fe6176\":0,\"00529a4760520df57305d20b5c48baeea4718b71\":0,\"0067befb4bbb070a89c25b29c61a81b507c89cb8\":0,\"00a827d059ec20498d0ad7f803ce8025224b6ac9\":0,\"00b5b9721d0dbaf84bcfef68fbcb3d029193d741\":0,\"00b93e5374de07468665f8c8f5a695a69aa114fc\":0,\"01051bcd9f1172c8e0c7148b8d82c2f0420712ee\":0,\"010ad6c7eb1d21e318773e2ba18bc338ca2d9604\":0,\"01158125abd0ec4ebdcb582a7d6f45f010916a5d\":0,\"0117c55160e12404347a847744237ad056b22a49\":0,\"0118411ff0e004f151a5d1fcc63b0ab9997ab6c0\":0,\"013c0f934c365f3cb0967869d55d2b15cfbfc61c\":0,\"01524e29399ff4c75284ff2d3355720014c37825\":0,\"0153f765d2d697b691badde788919444ac97660a\":0,\"019f6824d013f10b564f1d78215d7b84cbd78282\":0,\"01a95867a1d843d76084d42cf36281b39558b011\":0,\"01a97d16742fd9d74924a5aa59ac41f0e31810e9\":0,\"01b56df149647454305fa929fa828f738aa9deef\":0,\"01c7bbe3c3b79963d6b1eb07aee572b4e70b6af2\":0,\"01e7ec654c7e619af8259c6760f04253759f4277\":0,\"02063aeb02d9b863ffdad16f8dcdaff90e0ec0d9\":0,\"0214bb5f187567dff6868fd65fbb869303aff9c6\":0,\"0258ee11bc57624f5ee6b8ae97735e6c20e9694d\":0,\"025d2c6a2fb02a1671271bfe2e4c933c6546454c\":0,\"0285f1a7d09818f36a71e57fd9f86037b63e258e\":0,\"0288e0b94696c28ee8ec8d6127688d20802f0964\":0,\"02cf5d0800480b21d1fe777a789dd340664c4bed\":0,\"02e4bee8993a889e6b0d2825a1153a27c1a7646f\":0,\"03334dee00082809ae8479f69c119de90052527d\":0,\"033368eca7777d642c73df4a438275d8bcd0ec1f\":0,\"034a294ba5b6303d114e2859c897c155bf2c145f\":0,\"0374711cbf145884c151f2d013615d07ba10fb7a\":0,\"03925a0ae9f9721d20bbcdd1f71bbb55795f34ea\":0,\"03accb2613913fb66f8d01fd6efeadeb8d094eb5\":0,\"03b56b2397f75ca7885e405bd4a6860b39ce055c\":0,\"03b9dcb0e21eec77b44bb3643ccec840216828bc\":0,\"03c17c38ca42698ac8fa33892988d008b32f7427\":0,\"03cdd1a582b9277f2215eae2ae37c2daba606a56\":0,\"03cfd53d0410986589677e3cd9d2a55fd92e9d87\":0,\"03ee639b5cd4a9ebe868d4712fd71a5b001c9b95\":0,\"03f3173a27a57f3779157e0460910f7f78b00775\":0,\"0439951aa233e991bddc8f2eb315210b3aa3cfbe\":0,\"04554697645a694fe313cac3b62765fcdbbba860\":0,\"0465de90833fc4cb6cdbf4310477bb414d4469d6\":0,\"046c33f2768bbbaedfadbff0b2430c7da62baf34\":0,\"0483bdb316f76650964ac57a407c561edd8f0b27\":0,\"0489eb2aad80f6145afb24d58b87a1328ea9d9e5\":0,\"04ee18c99bb21fd015cf4376c14510b911235d8b\":0,\"0503cce48a5ac208b1a1b17c1db14901aafc943d\":0,\"05168626df3c7095a6399315a200f9d2faf8d4c2\":0,\"051c94ad8080cede65daf746bb7ed0fe54394d68\":0,\"051e7cdd305c8355c250585f07e797e70abff0ce\":0,\"0522240309e37819052d5214c6b512c845299325\":0,\"05534b18ebcb96ba7b56634d728e6ab5302ff2a4\":0,\"056132c674b47d37ae63f6f26ca02d7515e742f2\":0,\"0564989ce5de31a1857c8ef281be04fbdd74892f\":0,\"0583a9d1fdad421987718b6a4561b66c8a31f6b6\":0,\"05c1e4a1cb6ced939ae623e51ac5dd7535bbfe56\":0,\"05c4a3b159e6c27b02096ff4c67bb7b552d311b0\":0,\"05d7766363b384804af414b8b119215621e23395\":0,\"05e009a285e76e944951827b7e56bc694d080e55\":0,\"05f6dc966dd55feef073a300a448eae9732e2b47\":0,\"0632fb55c23bb14c82f0d127d872c2d458113e48\":0,\"06345505214a0e483ff9c615e78a3441c1e81342\":0,\"063e6fbddbe1886b00aa61e987376b44a51ecd20\":0,\"06d030b8769404fccb3e6f828254e610d31f8518\":0,\"06d07ed65df5fc467404af903fb214bf37f3cf92\":0,\"06ecd5d9ae88bff610591dede86212aeb95c3475\":0,\"06f53c2190d14d9827763ecf9b6c74b20273fc1e\":0,\"072a91c5ea616ce50fd0745e40e026904eead64c\":0,\"07347f6fcf2b3e0417b4f00f70ad1141177e6ed9\":0,\"0744dac5b2b91520a3baae14e9370b80c1344d74\":0,\"07647807a0b6efbd7cce3b60b28e11aac3beb8b8\":0,\"0765c2943ca84c909f66fb8d17eb875ced338b55\":0,\"07671f73324e70d0992ca2f8e3117b8ecb0f0c86\":0,\"07683f17969243b4469f12138ce62433b459f139\":0,\"078ec46eda2801dc47b072e5d9f8c1d5fdd5cd50\":0,\"07ae127fdef155340b34c7446ef4cee263af07ad\":0,\"07c02bf90e8da6140ead2fb8eba88fa133185426\":0,\"07d4e0339c6e038a3e565d420c4ed6ae877deee2\":0,\"080b7d56ea55f33c2fd77d299e5d404d1c452b56\":0,\"082602d1303e6e5dc76a354af9b8bb8d002a8009\":0,\"083ce1a4d661c88dafe8940355ff8e0bf3176211\":0,\"085963688b795a356428a757a5244a017d478258\":0,\"085ec6651727e9929c08a85aa30f6e9d45e2b843\":0,\"0862d5c5256adc0bb485e22e48fbb1996123e383\":0,\"08a09200019d1fa6136b869430a99a3736247b56\":0,\"08e7eeeb6820a2ad58d776b98af433d15a57e6ef\":0,\"08e9a9afa58197f434b858038c17f72cfbbea83e\":0,\"08ef33b974da139a8af8e7c146d8175442092a1b\":0,\"08f26614e2d95e5d1178166fa35b56e4e3f12fe7\":0,\"0946ae254d837fa5c2664a1c5175053f8ddd2f81\":0,\"094b190b8c4745044b5fffc69931619ea027a50d\":0,\"09756a9e485e36ada12d9436bda6fd8109fe95a0\":0,\"09775c11f5a1c9de9c2d3b7431dc52307a637e46\":0,\"0977874bc492018b35af33f978d98878557274a3\":0,\"0978854dd6cb50af367afe9970c7c532384c5969\":0}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"SELECT * FROM usersartistplays_partitioned WHERE Artist='clutch'\n",
+					"LIMIT 100"
+				],
+				"execution_count": 28
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"DROP TABLE artist_plays_clutch_temp"
+				],
+				"execution_count": 29
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Deleting is a partition drop\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"UserID"
+							],
+							"values": [
+								"Plays"
+							],
+							"yLabel": "Plays",
+							"xLabel": "UserID",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{\"Plays\":{}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"SELECT * FROM usersartistplays_partitioned WHERE Artist=\"atmosphere\"\n",
+					"LIMIT 10"
+				],
+				"execution_count": 32
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"ALTER TABLE usersartistplays_partitioned DROP PARTITION (Artist=\"atmosphere\")"
+				],
+				"execution_count": 31
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Spark can do partition elimination\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"UserID"
+							],
+							"values": [
+								"Plays"
+							],
+							"yLabel": "Plays",
+							"xLabel": "UserID",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{\"Plays\":{\"000ac3838c0889b96c9adb7a3e21dbfa0f29db1f\":26,\"001042d3aad1054f37b52ed2847104a3acaad37c\":294,\"00285441919bf128f353a3fe622d3cd7ecca3372\":60,\"002ae03c2b87da9ee661fce16d0807b7713bab2b\":17,\"003026511145551b573af4202544ced3d360947a\":347,\"00339a6d443083f8406f21b0b6633a01cd267437\":35,\"0040d725d500d3e61c1a354cca95c39be28a2c63\":118,\"004887b066248daec9f805912818d1afbe7d8ae2\":20,\"005c101f28304295a98c1c50e87ff31210b35e9b\":14,\"00609ec8e236b95165bf7f2e6647459f8b0df834\":44}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql \n",
+					"-- unpartitioned\n",
+					"SELECT * from userartistplays_unmgd\n",
+					"WHERE Artist='adele'\n",
+					"LIMIT 10"
+				],
+				"execution_count": 33
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"UserID"
+							],
+							"values": [
+								"Plays"
+							],
+							"yLabel": "Plays",
+							"xLabel": "UserID",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{\"Plays\":{\"000ac3838c0889b96c9adb7a3e21dbfa0f29db1f\":26,\"001042d3aad1054f37b52ed2847104a3acaad37c\":294,\"00285441919bf128f353a3fe622d3cd7ecca3372\":60,\"002ae03c2b87da9ee661fce16d0807b7713bab2b\":17,\"003026511145551b573af4202544ced3d360947a\":347,\"00339a6d443083f8406f21b0b6633a01cd267437\":35,\"0040d725d500d3e61c1a354cca95c39be28a2c63\":118,\"004887b066248daec9f805912818d1afbe7d8ae2\":20,\"005c101f28304295a98c1c50e87ff31210b35e9b\":14,\"00609ec8e236b95165bf7f2e6647459f8b0df834\":44}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"-- test the partitioning\n",
+					"SELECT * from usersartistplays_partitioned\n",
+					"WHERE Artist='adele'\n",
+					"LIMIT 10"
+				],
+				"execution_count": 34
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"spark.sql(\"\"\"SELECT * from usersartistplays_partitioned\n",
+					"WHERE Artist='adele'\n",
+					"LIMIT 10\"\"\").explain()"
+				],
+				"execution_count": 35
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Analyze the partitioning\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"dfpart = spark.table(\"usersartistplays_partitioned\")\n",
+					"dfpart.rdd.getNumPartitions()\n",
+					"dfpart.createOrReplaceTempView(\"uap_part\")\n",
+					"dfpart.rdd.glom().map(len).collect()"
+				],
+				"execution_count": 36
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"Artist"
+							],
+							"values": [
+								"sum(Plays)"
+							],
+							"yLabel": "sum(Plays)",
+							"xLabel": "Artist",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{\"sum(Plays)\":{\"311\":1051805,\"3 doors down\":2422409,\"30 seconds to mars\":3312611,\"38 special\":160,\"50 cent\":1968379,\"aaron tippin\":5601,\"adam lambert\":111644,\"adele\":815078,\"adventure club\":126,\"afrojack\":2337,\"akon\":1257062,\"alanis morrisette\":11,\"alicia keys\":1787881,\"alien ant farm\":319176,\"all american rejects\":477,\"all time low\":1304573,\"allen stone\":200,\"aloe blacc\":21998,\"amerie\":238116,\"anberlin\":2186237,\"andrew bird\":2486325,\"andrew wk\":41,\"andy grammer\":340,\"ani difranco\":1534271,\"anthony hamilton\":205704,\"arcade fire\":4341747,\"arctic monkeys\":8372088,\"arrested development\":84737,\"ashanti\":265077,\"asher roth\":112847,\"augustana\":541240,\"avenged sevenfold\":2580219,\"avicii\":138,\"axwell\":44062,\"b.o.b\":3935,\"baby bash\":32915,\"barenaked ladies\":1394330,\"bassnectar\":74177,\"bastille\":339,\"beenie man\":136452,\"beirut\":3888458,\"ben folds\":1695852,\"ben harper\":1182942,\"ben kweller\":493317,\"ben rector\":311,\"better than ezra\":186052,\"between the trees\":63620,\"big & rich\":71210,\"big boi\":21929,\"big sean\":22357,\"billy currington\":17167,\"billy ray cyrus\":19962,\"biz markie\":17001,\"black crowes\":12,\"black eyed peas\":1639824,\"blackberry smoke\":2811,\"blake lewis\":147571,\"blake shelton\":36442,\"blue october\":550047,\"blues traveler\":138090,\"bob dylan\":9417200,\"bob schneider\":51440,\"bobby valentino\":139024,\"bon jovi\":2373749,\"bonnie raitt\":112002,\"borgore\":4175,\"bowling for soup\":708583,\"boys like girls\":847510,\"brantley gilbert\":34,\"breaking benjamin\":2846099,\"breathe carolina\":228267,\"bret michaels\":7952,\"brett dennen\":154196,\"britney spears\":7462144,\"broken social scene\":2912713,\"brooke valentine\":14577,\"bruce hornsby\":60035,\"bruce springsteen\":3768893,\"busta rhymes\":623827,\"c2c\":1474,\"cage the elephant\":47242,\"caifanes\":168355,\"cake\":2162565,\"calvin harris\":406144,\"candlebox\":93009,\"carly rae jepsen\":2340,\"carolina liar\":73960,\"carrie underwood\":609809,\"cartel\":655506,\"cash money\":2291,\"cat power\":4031563,\"chamillionaire\":813428,\"charlie daniels band\":22551,\"charlie mars\":1588,\"cheap trick\":195338,\"chevelle\":912024,\"chiddy bang\":5609,\"childish gambino\":1150,\"chingy\":102669,\"chris botti\":190851,\"chris brown\":1157023,\"chris cornell\":498130,\"chris young\":4721,\"christina aguilera\":2677950,\"chromeo\":461278,\"chuck leavell\":436,\"churchill\":332,\"ciara\":461670,\"circa survive\":1231859,\"citizen\":1226,\"clay aiken\":63237,\"clint black\":25852,\"clipse\":367554,\"cloud cult\":446039,\"clutch\":0,\"cobra starship\":1030937,\"coheed & cambria\":1861,\"colby odonis\":29350,\"cold war kids\":673095,\"coldplay\":16659495,\"collective soul\":443468,\"colt ford\":537,\"common\":1645152,\"coolio\":42675,\"corey smith\":16837,\"counting crows\":1682816,\"cowboy mouth\":26974,\"cracker\":73215,\"craig morgan\":10940,\"creed\":759849,\"creedence clearwater revival\":1857999,\"da brat\":3561,\"damian marley\":562242,\"danny brown\":4125,\"danny gokey\":2913,\"darius rucker\":9591,\"daughtry\":454184,\"dave matthews\":149303,\"david banner\":73765,\"david cook\":425194,\"david gray\":702706,\"david guetta\":1010269,\"de la soul\":872886,\"deadmau5\":346375,\"death cab for cutie\":10555632,\"default\":118543,\"demi lovato\":282909,\"devotchka\":488285,\"diamond rio\":22541,\"dierks bentley\":88263,\"dionne warwick\":76770,\"disco biscuits\":11804,\"dispatch\":459782,\"disturbed\":5144597,\"dj shadow\":1942522,\"don williams\":24909,\"drake\":263747,\"drive by truckers\":36,\"dropkick murphys\":3173813,\"drowning pool\":637555,\"duncan sheik\":86654,\"eagles of death metal\":876802,\"editors\":1831296,\"edwin mccain\":33582,\"eli young band\":17581,\"ellie goulding\":2670,\"elvis crespo\":15367,\"emerson drive\":18114,\"eric church\":16548,\"eric hutchinson\":61486,\"erykah badu\":1094426,\"eve 6\":235712,\"everclear\":392081,\"everlast\":411360,\"fabolous\":338228,\"faith evans\":68688,\"faith hill\":162388,\"fall out boy\":6673759,\"family force five\":132,\"fantasia\":47553,\"far east movement\":4178,\"fastball\":59963,\"fat joe\":134605,\"feed me\":3764,\"feist\":4180818,\"filter\":255013,\"finger eleven\":366860,\"five for fighting\":226028,\"flo rida\":389053,\"flobots\":246486,\"flogging molly\":2240713,\"flyleaf\":1168251,\"fonseca\":39243,\"foreigner\":266008,\"fountains of wayne\":457328,\"four year strong\":404578,\"french montana\":1916,\"fuel\":329599,\"future\":6,\"g. love\":55717,\"galactic\":95659,\"gary allan\":79579,\"gaslight anthem\":5723,\"gavin degraw\":503053,\"george clinton\":21968,\"ghostface\":795590,\"gin blossoms\":108730,\"girl talk\":1642798,\"gloriana\":8872,\"godsmack\":1415806,\"gogol bordello\":1436851,\"goldfinger\":866540,\"gomez\":524926,\"goo goo dolls\":1464775,\"gotye\":108641,\"greenday\":2,\"gretchen wilson\":26974,\"grizzly bear\":1005408,\"gucci mane\":148057,\"gym class heroes\":1050863,\"hal ketchum\":1832,\"hanson\":552183,\"hellogoodbye\":972628,\"holy ghost!\":1143,\"hoobastank\":1110416,\"hot chelle rae\":23,\"howie day\":261764,\"ice cube\":815312,\"incubus\":6354554,\"india arie\":45,\"indigo girls\":397282,\"ingrid michaelson\":422010,\"j. holiday\":129269,\"ja rule\":147406,\"jack ingram\":20722,\"jadakiss\":158051,\"jakob dylan\":33804,\"james blunt\":1819929,\"james otto\":5878,\"jason derulo\":857,\"jason michael carroll\":6577,\"jay sean\":166844,\"jefferson starship\":13705,\"jeremih\":3985,\"jessica simpson\":186945,\"jet\":578865,\"jewel\":470525,\"jill scott\":463765,\"jo dee messina\":28974,\"joan jett\":20337,\"john anderson\":12894,\"john legend\":1078821,\"john mayer\":3446253,\"jon mclaughlin\":178655,\"jonathan davis\":39045,\"josh gracin\":13107,\"josh groban\":528724,\"josh turner\":45101,\"joshua radin\":672391,\"juanes\":450261,\"juicy j\":13706,\"julian marley\":7216,\"jurassic 5\":992727,\"justin bieber\":1174,\"justin moore\":50,\"justin nozuka\":119239,\"justin timberlake\":2178677,\"kaiser chiefs\":2268915,\"kaki king\":502763,\"kanye west\":6354476,\"kaskade\":382269,\"kate voegele\":215042,\"katy perry\":1614750,\"ke$ha\":4487,\"keith anderson\":8357,\"keith urban\":237185,\"kelis\":309748,\"kelly clarkson\":2304200,\"kelly rowland\":213650,\"kenny rogers\":71701,\"kenny wayne shepherd\":153,\"keri hilson\":213844,\"kevin rudolf\":81029,\"keyshia cole\":243932,\"kid cudi\":462759,\"kid rock\":234475,\"kings of leon\":5655955,\"korn\":16731,\"kris allen\":57234,\"la roux\":280784,\"lady antebellum\":26220,\"lady gaga\":2793937,\"larry gatlin\":162,\"leann rimes\":234504,\"lee ann womack\":38206,\"lee brice\":760,\"less than jake\":1781111,\"lifehouse\":1606706,\"lights\":80230,\"lil' wayne\":1129657,\"linkin park\":12783925,\"lit\":64075,\"little big town\":26886,\"ll cool j\":155234,\"lloyd\":142662,\"lmfao\":48165,\"local natives\":3157,\"logic\":1557,\"lonestar\":62495,\"los lobos\":115375,\"los lonely boys\":35403,\"lotus\":42558,\"ludacris\":776842,\"ludo\":91439,\"luke bryan\":7063,\"lupe fiasco\":1854972,\"macklemore\":10399,\"macy gray\":205739,\"madonna\":7599958,\"marc broussard\":78241,\"marc cohn\":40217,\"mario\":179294,\"mark wills\":10547,\"maroon 5\":2512341,\"martina mcbride\":103586,\"mat kearney\":149848,\"matchbox 20\":259,\"matisyahu\":961959,\"matt & kim\":182761,\"matt nathanson\":356705,\"maxwell\":188714,\"mayday parade\":611574,\"merle haggard\":128514,\"mgmt\":2489198,\"michael franti\":36197,\"michelle branch\":464106,\"mighty mighty bosstones\":86,\"miguel\":1793,\"miike snow\":37101,\"mike gordon\":3481,\"mike posner\":216,\"mims\":54258,\"mindy smith\":47761,\"minus the bear\":1895264,\"miranda lambert\":83369,\"mobb deep\":650853,\"moe\":1047,\"mogwai\":3738107,\"montell jordan\":9130,\"morrissey\":3333603,\"motion city soundtrack\":1518302,\"mumford & sons\":25583,\"muse\":15406105,\"musiq\":234576,\"mute math\":411161,\"nas\":2935156,\"naturally 7\":13400,\"ne-yo\":1158785,\"needtobreathe\":57587,\"new boyz\":72,\"nickel creek\":364577,\"nicki minaj\":8487,\"nitty gritty dirt band\":34,\"no doubt\":1325470,\"norah jones\":3163207,\"ok go\":730862,\"old 97's\":130495,\"olly murs\":46,\"one republic\":1535,\"owl city\":402737,\"ozomatli\":76027,\"p.o.d\":1232108,\"pam tillis\":6384,\"panic! at the disco\":637684,\"paolo nutini\":584338,\"papa roach\":2629981,\"parachute\":11566,\"paramore\":5665097,\"passenger\":47170,\"passion pit\":260170,\"pat benatar\":113547,\"pat green\":33364,\"pat travers\":10811,\"paul wall\":89203,\"pearl jam\":5890493,\"pepper\":208683,\"perpetual groove\":36218,\"phil vassar\":22468,\"phoenix\":1102578,\"pitbull\":220257,\"plain white ts\":534098,\"pleasure p\":15948,\"plies\":139058,\"portugal the man\":98,\"pretty lights\":24907,\"psy\":2536,\"public enemy\":611022,\"puddle of mudd\":353985,\"q-tip\":267259,\"queens of the stone age\":5910488,\"quiet riot\":73034,\"ra ra riot\":160607,\"rascal flatts\":433277,\"ray price\":13350,\"rebirth brass band\":3378,\"red\":314914,\"reel big fish\":1704015,\"regina spektor\":4320968,\"relient k\":1524771,\"rev theory\":28092,\"rhett atkins\":37,\"rick ross\":407934,\"rick springfield\":43347,\"rihanna\":3306883,\"rise against\":6351825,\"rob thomas\":188009,\"robin thicke\":286497,\"rogue wave\":386000,\"rooney\":322974,\"rusted root\":41228,\"sam moore\":951,\"santigold\":14430,\"sara bareilles\":538681,\"sara evans\":54380,\"saving abel\":40605,\"say anything\":1442053,\"sea wolf\":96542,\"sean kingston\":159472,\"sebastian ingrosso\":982,\"secondhand serenade\":549280,\"seether\":1314444,\"selena gomez\":35214,\"sevendust\":589415,\"shakira\":1641137,\"shawn mullins\":30625,\"she wants revenge\":818424,\"shedaisy\":19963,\"sheryl crow\":563184,\"shinedown\":678976,\"shooter jennings\":35370,\"shwayze\":117126,\"sick puppies\":180292,\"silversun pickups\":620163,\"simple plan\":1849652,\"skillet\":910507,\"slash\":2937,\"slightly stoopid\":566201,\"slipknot\":5644425,\"slum village\":288212,\"smash mouth\":323732,\"smashing pumpkins\":10690,\"snow patrol\":4264519,\"solange knowles\":1622,\"soul asylum\":65777,\"soulja boy\":148862,\"spearhead\":23123,\"spoon\":2262308,\"st. vincent\":236856,\"staind\":1256808,\"state radio\":167967,\"steel train\":46453,\"steve aoki\":76918,\"steve miller band\":178950,\"stockholm syndrome\":516,\"stone temple pilots\":955328,\"story of the year\":926057,\"sugar ray\":102416,\"sugarcult\":649480,\"sugarland\":119784,\"sum 41\":3634887,\"surfer blood\":186,\"susan boyle\":2333,\"switchfoot\":1109780,\"t-pain\":389869,\"taio cruz\":106503,\"taking back sunday\":2358591,\"talib kweli\":853753,\"taylor swift\":1173634,\"terri clark\":28941,\"the bravery\":642553,\"the civil wars\":224,\"the dandy warhols\":1118929,\"the dream\":5921,\"the flaming lips\":2351205,\"the fray\":1718387,\"the game\":1610632,\"the killers\":9586864,\"the national\":2995564,\"the neighborhood\":352,\"the offspring\":5897625,\"the roots\":1925167,\"the script\":293233,\"the starting line\":668342,\"the temper trap\":27418,\"the ting tings\":870042,\"the wailers\":27616,\"the wallflowers\":234588,\"the wanted\":298,\"theory of a deadman\":395185,\"third eye blind\":889241,\"three 6 mafia\":623504,\"three days grace\":2106900,\"tiesto\":1451,\"tim mcgraw\":209419,\"toby keith\":171620,\"toby mac\":173,\"toots & the maytals\":97,\"tori amos\":4955975,\"tracy lawrence\":15166,\"train\":200804,\"travis tritt\":25008,\"trey songz\":213205,\"tyga\":26615,\"usher\":922458,\"vampire weekend\":1513819,\"vertical horizon\":248499,\"wale\":205413,\"walk the moon\":135,\"weezer\":2162596,\"willie nelson\":263313,\"wiz khalifa\":45445,\"xzibit\":174595,\"yeasayer\":108621,\"yo gotti\":15126,\"young jeezy\":399013,\"zac brown band\":14191,\"ziggy marley\":75322}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					}
+				},
+				"source": [
+					"%%sql\n",
+					"SELECT SUM(Plays),Artist\n",
+					"FROM uap_part\n",
+					"GROUP BY Artist"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"dfpart = dfpart.repartition(4,\"Artist\")\n",
+					"dfpart.createOrReplaceTempView(\"uap_part\")\n",
+					"dfpart.rdd.glom().map(len).collect()"
+				],
+				"execution_count": 37
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"Artist"
+							],
+							"values": [
+								"sum(Plays)"
+							],
+							"yLabel": "sum(Plays)",
+							"xLabel": "Artist",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{\"sum(Plays)\":{\"311\":1051805,\"3 doors down\":2422409,\"30 seconds to mars\":3312611,\"38 special\":160,\"50 cent\":1968379,\"aaron tippin\":5601,\"adam lambert\":111644,\"adele\":815078,\"adventure club\":126,\"afrojack\":2337,\"akon\":1257062,\"alanis morrisette\":11,\"alicia keys\":1787881,\"alien ant farm\":319176,\"all american rejects\":477,\"all time low\":1304573,\"allen stone\":200,\"aloe blacc\":21998,\"amerie\":238116,\"anberlin\":2186237,\"andrew bird\":2486325,\"andrew wk\":41,\"andy grammer\":340,\"ani difranco\":1534271,\"anthony hamilton\":205704,\"arcade fire\":4341747,\"arctic monkeys\":8372088,\"arrested development\":84737,\"ashanti\":265077,\"asher roth\":112847,\"augustana\":541240,\"avenged sevenfold\":2580219,\"avicii\":138,\"axwell\":44062,\"b.o.b\":3935,\"baby bash\":32915,\"barenaked ladies\":1394330,\"bassnectar\":74177,\"bastille\":339,\"beenie man\":136452,\"beirut\":3888458,\"ben folds\":1695852,\"ben harper\":1182942,\"ben kweller\":493317,\"ben rector\":311,\"better than ezra\":186052,\"between the trees\":63620,\"big & rich\":71210,\"big boi\":21929,\"big sean\":22357,\"billy currington\":17167,\"billy ray cyrus\":19962,\"biz markie\":17001,\"black crowes\":12,\"black eyed peas\":1639824,\"blackberry smoke\":2811,\"blake lewis\":147571,\"blake shelton\":36442,\"blue october\":550047,\"blues traveler\":138090,\"bob dylan\":9417200,\"bob schneider\":51440,\"bobby valentino\":139024,\"bon jovi\":2373749,\"bonnie raitt\":112002,\"borgore\":4175,\"bowling for soup\":708583,\"boys like girls\":847510,\"brantley gilbert\":34,\"breaking benjamin\":2846099,\"breathe carolina\":228267,\"bret michaels\":7952,\"brett dennen\":154196,\"britney spears\":7462144,\"broken social scene\":2912713,\"brooke valentine\":14577,\"bruce hornsby\":60035,\"bruce springsteen\":3768893,\"busta rhymes\":623827,\"c2c\":1474,\"cage the elephant\":47242,\"caifanes\":168355,\"cake\":2162565,\"calvin harris\":406144,\"candlebox\":93009,\"carly rae jepsen\":2340,\"carolina liar\":73960,\"carrie underwood\":609809,\"cartel\":655506,\"cash money\":2291,\"cat power\":4031563,\"chamillionaire\":813428,\"charlie daniels band\":22551,\"charlie mars\":1588,\"cheap trick\":195338,\"chevelle\":912024,\"chiddy bang\":5609,\"childish gambino\":1150,\"chingy\":102669,\"chris botti\":190851,\"chris brown\":1157023,\"chris cornell\":498130,\"chris young\":4721,\"christina aguilera\":2677950,\"chromeo\":461278,\"chuck leavell\":436,\"churchill\":332,\"ciara\":461670,\"circa survive\":1231859,\"citizen\":1226,\"clay aiken\":63237,\"clint black\":25852,\"clipse\":367554,\"cloud cult\":446039,\"clutch\":0,\"cobra starship\":1030937,\"coheed & cambria\":1861,\"colby odonis\":29350,\"cold war kids\":673095,\"coldplay\":16659495,\"collective soul\":443468,\"colt ford\":537,\"common\":1645152,\"coolio\":42675,\"corey smith\":16837,\"counting crows\":1682816,\"cowboy mouth\":26974,\"cracker\":73215,\"craig morgan\":10940,\"creed\":759849,\"creedence clearwater revival\":1857999,\"da brat\":3561,\"damian marley\":562242,\"danny brown\":4125,\"danny gokey\":2913,\"darius rucker\":9591,\"daughtry\":454184,\"dave matthews\":149303,\"david banner\":73765,\"david cook\":425194,\"david gray\":702706,\"david guetta\":1010269,\"de la soul\":872886,\"deadmau5\":346375,\"death cab for cutie\":10555632,\"default\":118543,\"demi lovato\":282909,\"devotchka\":488285,\"diamond rio\":22541,\"dierks bentley\":88263,\"dionne warwick\":76770,\"disco biscuits\":11804,\"dispatch\":459782,\"disturbed\":5144597,\"dj shadow\":1942522,\"don williams\":24909,\"drake\":263747,\"drive by truckers\":36,\"dropkick murphys\":3173813,\"drowning pool\":637555,\"duncan sheik\":86654,\"eagles of death metal\":876802,\"editors\":1831296,\"edwin mccain\":33582,\"eli young band\":17581,\"ellie goulding\":2670,\"elvis crespo\":15367,\"emerson drive\":18114,\"eric church\":16548,\"eric hutchinson\":61486,\"erykah badu\":1094426,\"eve 6\":235712,\"everclear\":392081,\"everlast\":411360,\"fabolous\":338228,\"faith evans\":68688,\"faith hill\":162388,\"fall out boy\":6673759,\"family force five\":132,\"fantasia\":47553,\"far east movement\":4178,\"fastball\":59963,\"fat joe\":134605,\"feed me\":3764,\"feist\":4180818,\"filter\":255013,\"finger eleven\":366860,\"five for fighting\":226028,\"flo rida\":389053,\"flobots\":246486,\"flogging molly\":2240713,\"flyleaf\":1168251,\"fonseca\":39243,\"foreigner\":266008,\"fountains of wayne\":457328,\"four year strong\":404578,\"french montana\":1916,\"fuel\":329599,\"future\":6,\"g. love\":55717,\"galactic\":95659,\"gary allan\":79579,\"gaslight anthem\":5723,\"gavin degraw\":503053,\"george clinton\":21968,\"ghostface\":795590,\"gin blossoms\":108730,\"girl talk\":1642798,\"gloriana\":8872,\"godsmack\":1415806,\"gogol bordello\":1436851,\"goldfinger\":866540,\"gomez\":524926,\"goo goo dolls\":1464775,\"gotye\":108641,\"greenday\":2,\"gretchen wilson\":26974,\"grizzly bear\":1005408,\"gucci mane\":148057,\"gym class heroes\":1050863,\"hal ketchum\":1832,\"hanson\":552183,\"hellogoodbye\":972628,\"holy ghost!\":1143,\"hoobastank\":1110416,\"hot chelle rae\":23,\"howie day\":261764,\"ice cube\":815312,\"incubus\":6354554,\"india arie\":45,\"indigo girls\":397282,\"ingrid michaelson\":422010,\"j. holiday\":129269,\"ja rule\":147406,\"jack ingram\":20722,\"jadakiss\":158051,\"jakob dylan\":33804,\"james blunt\":1819929,\"james otto\":5878,\"jason derulo\":857,\"jason michael carroll\":6577,\"jay sean\":166844,\"jefferson starship\":13705,\"jeremih\":3985,\"jessica simpson\":186945,\"jet\":578865,\"jewel\":470525,\"jill scott\":463765,\"jo dee messina\":28974,\"joan jett\":20337,\"john anderson\":12894,\"john legend\":1078821,\"john mayer\":3446253,\"jon mclaughlin\":178655,\"jonathan davis\":39045,\"josh gracin\":13107,\"josh groban\":528724,\"josh turner\":45101,\"joshua radin\":672391,\"juanes\":450261,\"juicy j\":13706,\"julian marley\":7216,\"jurassic 5\":992727,\"justin bieber\":1174,\"justin moore\":50,\"justin nozuka\":119239,\"justin timberlake\":2178677,\"kaiser chiefs\":2268915,\"kaki king\":502763,\"kanye west\":6354476,\"kaskade\":382269,\"kate voegele\":215042,\"katy perry\":1614750,\"ke$ha\":4487,\"keith anderson\":8357,\"keith urban\":237185,\"kelis\":309748,\"kelly clarkson\":2304200,\"kelly rowland\":213650,\"kenny rogers\":71701,\"kenny wayne shepherd\":153,\"keri hilson\":213844,\"kevin rudolf\":81029,\"keyshia cole\":243932,\"kid cudi\":462759,\"kid rock\":234475,\"kings of leon\":5655955,\"korn\":16731,\"kris allen\":57234,\"la roux\":280784,\"lady antebellum\":26220,\"lady gaga\":2793937,\"larry gatlin\":162,\"leann rimes\":234504,\"lee ann womack\":38206,\"lee brice\":760,\"less than jake\":1781111,\"lifehouse\":1606706,\"lights\":80230,\"lil' wayne\":1129657,\"linkin park\":12783925,\"lit\":64075,\"little big town\":26886,\"ll cool j\":155234,\"lloyd\":142662,\"lmfao\":48165,\"local natives\":3157,\"logic\":1557,\"lonestar\":62495,\"los lobos\":115375,\"los lonely boys\":35403,\"lotus\":42558,\"ludacris\":776842,\"ludo\":91439,\"luke bryan\":7063,\"lupe fiasco\":1854972,\"macklemore\":10399,\"macy gray\":205739,\"madonna\":7599958,\"marc broussard\":78241,\"marc cohn\":40217,\"mario\":179294,\"mark wills\":10547,\"maroon 5\":2512341,\"martina mcbride\":103586,\"mat kearney\":149848,\"matchbox 20\":259,\"matisyahu\":961959,\"matt & kim\":182761,\"matt nathanson\":356705,\"maxwell\":188714,\"mayday parade\":611574,\"merle haggard\":128514,\"mgmt\":2489198,\"michael franti\":36197,\"michelle branch\":464106,\"mighty mighty bosstones\":86,\"miguel\":1793,\"miike snow\":37101,\"mike gordon\":3481,\"mike posner\":216,\"mims\":54258,\"mindy smith\":47761,\"minus the bear\":1895264,\"miranda lambert\":83369,\"mobb deep\":650853,\"moe\":1047,\"mogwai\":3738107,\"montell jordan\":9130,\"morrissey\":3333603,\"motion city soundtrack\":1518302,\"mumford & sons\":25583,\"muse\":15406105,\"musiq\":234576,\"mute math\":411161,\"nas\":2935156,\"naturally 7\":13400,\"ne-yo\":1158785,\"needtobreathe\":57587,\"new boyz\":72,\"nickel creek\":364577,\"nicki minaj\":8487,\"nitty gritty dirt band\":34,\"no doubt\":1325470,\"norah jones\":3163207,\"ok go\":730862,\"old 97's\":130495,\"olly murs\":46,\"one republic\":1535,\"owl city\":402737,\"ozomatli\":76027,\"p.o.d\":1232108,\"pam tillis\":6384,\"panic! at the disco\":637684,\"paolo nutini\":584338,\"papa roach\":2629981,\"parachute\":11566,\"paramore\":5665097,\"passenger\":47170,\"passion pit\":260170,\"pat benatar\":113547,\"pat green\":33364,\"pat travers\":10811,\"paul wall\":89203,\"pearl jam\":5890493,\"pepper\":208683,\"perpetual groove\":36218,\"phil vassar\":22468,\"phoenix\":1102578,\"pitbull\":220257,\"plain white ts\":534098,\"pleasure p\":15948,\"plies\":139058,\"portugal the man\":98,\"pretty lights\":24907,\"psy\":2536,\"public enemy\":611022,\"puddle of mudd\":353985,\"q-tip\":267259,\"queens of the stone age\":5910488,\"quiet riot\":73034,\"ra ra riot\":160607,\"rascal flatts\":433277,\"ray price\":13350,\"rebirth brass band\":3378,\"red\":314914,\"reel big fish\":1704015,\"regina spektor\":4320968,\"relient k\":1524771,\"rev theory\":28092,\"rhett atkins\":37,\"rick ross\":407934,\"rick springfield\":43347,\"rihanna\":3306883,\"rise against\":6351825,\"rob thomas\":188009,\"robin thicke\":286497,\"rogue wave\":386000,\"rooney\":322974,\"rusted root\":41228,\"sam moore\":951,\"santigold\":14430,\"sara bareilles\":538681,\"sara evans\":54380,\"saving abel\":40605,\"say anything\":1442053,\"sea wolf\":96542,\"sean kingston\":159472,\"sebastian ingrosso\":982,\"secondhand serenade\":549280,\"seether\":1314444,\"selena gomez\":35214,\"sevendust\":589415,\"shakira\":1641137,\"shawn mullins\":30625,\"she wants revenge\":818424,\"shedaisy\":19963,\"sheryl crow\":563184,\"shinedown\":678976,\"shooter jennings\":35370,\"shwayze\":117126,\"sick puppies\":180292,\"silversun pickups\":620163,\"simple plan\":1849652,\"skillet\":910507,\"slash\":2937,\"slightly stoopid\":566201,\"slipknot\":5644425,\"slum village\":288212,\"smash mouth\":323732,\"smashing pumpkins\":10690,\"snow patrol\":4264519,\"solange knowles\":1622,\"soul asylum\":65777,\"soulja boy\":148862,\"spearhead\":23123,\"spoon\":2262308,\"st. vincent\":236856,\"staind\":1256808,\"state radio\":167967,\"steel train\":46453,\"steve aoki\":76918,\"steve miller band\":178950,\"stockholm syndrome\":516,\"stone temple pilots\":955328,\"story of the year\":926057,\"sugar ray\":102416,\"sugarcult\":649480,\"sugarland\":119784,\"sum 41\":3634887,\"surfer blood\":186,\"susan boyle\":2333,\"switchfoot\":1109780,\"t-pain\":389869,\"taio cruz\":106503,\"taking back sunday\":2358591,\"talib kweli\":853753,\"taylor swift\":1173634,\"terri clark\":28941,\"the bravery\":642553,\"the civil wars\":224,\"the dandy warhols\":1118929,\"the dream\":5921,\"the flaming lips\":2351205,\"the fray\":1718387,\"the game\":1610632,\"the killers\":9586864,\"the national\":2995564,\"the neighborhood\":352,\"the offspring\":5897625,\"the roots\":1925167,\"the script\":293233,\"the starting line\":668342,\"the temper trap\":27418,\"the ting tings\":870042,\"the wailers\":27616,\"the wallflowers\":234588,\"the wanted\":298,\"theory of a deadman\":395185,\"third eye blind\":889241,\"three 6 mafia\":623504,\"three days grace\":2106900,\"tiesto\":1451,\"tim mcgraw\":209419,\"toby keith\":171620,\"toby mac\":173,\"toots & the maytals\":97,\"tori amos\":4955975,\"tracy lawrence\":15166,\"train\":200804,\"travis tritt\":25008,\"trey songz\":213205,\"tyga\":26615,\"usher\":922458,\"vampire weekend\":1513819,\"vertical horizon\":248499,\"wale\":205413,\"walk the moon\":135,\"weezer\":2162596,\"willie nelson\":263313,\"wiz khalifa\":45445,\"xzibit\":174595,\"yeasayer\":108621,\"yo gotti\":15126,\"young jeezy\":399013,\"zac brown band\":14191,\"ziggy marley\":75322}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					}
+				},
+				"source": [
+					"%%sql\n",
+					"SELECT SUM(Plays),Artist\n",
+					"FROM uap_part\n",
+					"GROUP BY Artist"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"(dfpart.write\n",
+					"  .mode(\"overwrite\")\n",
+					"  .saveAsTable(\"usersartistplays_4buckets\"))"
+				],
+				"execution_count": 38
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"dfpart4 = spark.table(\"usersartistplays_4buckets\")\n",
+					"dfpart4.createOrReplaceTempView(\"uap_part4\")\n",
+					"dfpart4.rdd.glom().map(len).collect()"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"Artist"
+							],
+							"values": [
+								"sum(Plays)"
+							],
+							"yLabel": "sum(Plays)",
+							"xLabel": "Artist",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{\"sum(Plays)\":{\"311\":1051805,\"3 doors down\":2422409,\"30 seconds to mars\":3312611,\"38 special\":160,\"50 cent\":1968379,\"aaron tippin\":5601,\"adam lambert\":111644,\"adele\":815078,\"adventure club\":126,\"afrojack\":2337,\"akon\":1257062,\"alanis morrisette\":11,\"alicia keys\":1787881,\"alien ant farm\":319176,\"all american rejects\":477,\"all time low\":1304573,\"allen stone\":200,\"aloe blacc\":21998,\"amerie\":238116,\"anberlin\":2186237,\"andrew bird\":2486325,\"andrew wk\":41,\"andy grammer\":340,\"ani difranco\":1534271,\"anthony hamilton\":205704,\"arcade fire\":4341747,\"arctic monkeys\":8372088,\"arrested development\":84737,\"ashanti\":265077,\"asher roth\":112847,\"augustana\":541240,\"avenged sevenfold\":2580219,\"avicii\":138,\"axwell\":44062,\"b.o.b\":3935,\"baby bash\":32915,\"barenaked ladies\":1394330,\"bassnectar\":74177,\"bastille\":339,\"beenie man\":136452,\"beirut\":3888458,\"ben folds\":1695852,\"ben harper\":1182942,\"ben kweller\":493317,\"ben rector\":311,\"better than ezra\":186052,\"between the trees\":63620,\"big & rich\":71210,\"big boi\":21929,\"big sean\":22357,\"billy currington\":17167,\"billy ray cyrus\":19962,\"biz markie\":17001,\"black crowes\":12,\"black eyed peas\":1639824,\"blackberry smoke\":2811,\"blake lewis\":147571,\"blake shelton\":36442,\"blue october\":550047,\"blues traveler\":138090,\"bob dylan\":9417200,\"bob schneider\":51440,\"bobby valentino\":139024,\"bon jovi\":2373749,\"bonnie raitt\":112002,\"borgore\":4175,\"bowling for soup\":708583,\"boys like girls\":847510,\"brantley gilbert\":34,\"breaking benjamin\":2846099,\"breathe carolina\":228267,\"bret michaels\":7952,\"brett dennen\":154196,\"britney spears\":7462144,\"broken social scene\":2912713,\"brooke valentine\":14577,\"bruce hornsby\":60035,\"bruce springsteen\":3768893,\"busta rhymes\":623827,\"c2c\":1474,\"cage the elephant\":47242,\"caifanes\":168355,\"cake\":2162565,\"calvin harris\":406144,\"candlebox\":93009,\"carly rae jepsen\":2340,\"carolina liar\":73960,\"carrie underwood\":609809,\"cartel\":655506,\"cash money\":2291,\"cat power\":4031563,\"chamillionaire\":813428,\"charlie daniels band\":22551,\"charlie mars\":1588,\"cheap trick\":195338,\"chevelle\":912024,\"chiddy bang\":5609,\"childish gambino\":1150,\"chingy\":102669,\"chris botti\":190851,\"chris brown\":1157023,\"chris cornell\":498130,\"chris young\":4721,\"christina aguilera\":2677950,\"chromeo\":461278,\"chuck leavell\":436,\"churchill\":332,\"ciara\":461670,\"circa survive\":1231859,\"citizen\":1226,\"clay aiken\":63237,\"clint black\":25852,\"clipse\":367554,\"cloud cult\":446039,\"clutch\":0,\"cobra starship\":1030937,\"coheed & cambria\":1861,\"colby odonis\":29350,\"cold war kids\":673095,\"coldplay\":16659495,\"collective soul\":443468,\"colt ford\":537,\"common\":1645152,\"coolio\":42675,\"corey smith\":16837,\"counting crows\":1682816,\"cowboy mouth\":26974,\"cracker\":73215,\"craig morgan\":10940,\"creed\":759849,\"creedence clearwater revival\":1857999,\"da brat\":3561,\"damian marley\":562242,\"danny brown\":4125,\"danny gokey\":2913,\"darius rucker\":9591,\"daughtry\":454184,\"dave matthews\":149303,\"david banner\":73765,\"david cook\":425194,\"david gray\":702706,\"david guetta\":1010269,\"de la soul\":872886,\"deadmau5\":346375,\"death cab for cutie\":10555632,\"default\":118543,\"demi lovato\":282909,\"devotchka\":488285,\"diamond rio\":22541,\"dierks bentley\":88263,\"dionne warwick\":76770,\"disco biscuits\":11804,\"dispatch\":459782,\"disturbed\":5144597,\"dj shadow\":1942522,\"don williams\":24909,\"drake\":263747,\"drive by truckers\":36,\"dropkick murphys\":3173813,\"drowning pool\":637555,\"duncan sheik\":86654,\"eagles of death metal\":876802,\"editors\":1831296,\"edwin mccain\":33582,\"eli young band\":17581,\"ellie goulding\":2670,\"elvis crespo\":15367,\"emerson drive\":18114,\"eric church\":16548,\"eric hutchinson\":61486,\"erykah badu\":1094426,\"eve 6\":235712,\"everclear\":392081,\"everlast\":411360,\"fabolous\":338228,\"faith evans\":68688,\"faith hill\":162388,\"fall out boy\":6673759,\"family force five\":132,\"fantasia\":47553,\"far east movement\":4178,\"fastball\":59963,\"fat joe\":134605,\"feed me\":3764,\"feist\":4180818,\"filter\":255013,\"finger eleven\":366860,\"five for fighting\":226028,\"flo rida\":389053,\"flobots\":246486,\"flogging molly\":2240713,\"flyleaf\":1168251,\"fonseca\":39243,\"foreigner\":266008,\"fountains of wayne\":457328,\"four year strong\":404578,\"french montana\":1916,\"fuel\":329599,\"future\":6,\"g. love\":55717,\"galactic\":95659,\"gary allan\":79579,\"gaslight anthem\":5723,\"gavin degraw\":503053,\"george clinton\":21968,\"ghostface\":795590,\"gin blossoms\":108730,\"girl talk\":1642798,\"gloriana\":8872,\"godsmack\":1415806,\"gogol bordello\":1436851,\"goldfinger\":866540,\"gomez\":524926,\"goo goo dolls\":1464775,\"gotye\":108641,\"greenday\":2,\"gretchen wilson\":26974,\"grizzly bear\":1005408,\"gucci mane\":148057,\"gym class heroes\":1050863,\"hal ketchum\":1832,\"hanson\":552183,\"hellogoodbye\":972628,\"holy ghost!\":1143,\"hoobastank\":1110416,\"hot chelle rae\":23,\"howie day\":261764,\"ice cube\":815312,\"incubus\":6354554,\"india arie\":45,\"indigo girls\":397282,\"ingrid michaelson\":422010,\"j. holiday\":129269,\"ja rule\":147406,\"jack ingram\":20722,\"jadakiss\":158051,\"jakob dylan\":33804,\"james blunt\":1819929,\"james otto\":5878,\"jason derulo\":857,\"jason michael carroll\":6577,\"jay sean\":166844,\"jefferson starship\":13705,\"jeremih\":3985,\"jessica simpson\":186945,\"jet\":578865,\"jewel\":470525,\"jill scott\":463765,\"jo dee messina\":28974,\"joan jett\":20337,\"john anderson\":12894,\"john legend\":1078821,\"john mayer\":3446253,\"jon mclaughlin\":178655,\"jonathan davis\":39045,\"josh gracin\":13107,\"josh groban\":528724,\"josh turner\":45101,\"joshua radin\":672391,\"juanes\":450261,\"juicy j\":13706,\"julian marley\":7216,\"jurassic 5\":992727,\"justin bieber\":1174,\"justin moore\":50,\"justin nozuka\":119239,\"justin timberlake\":2178677,\"kaiser chiefs\":2268915,\"kaki king\":502763,\"kanye west\":6354476,\"kaskade\":382269,\"kate voegele\":215042,\"katy perry\":1614750,\"ke$ha\":4487,\"keith anderson\":8357,\"keith urban\":237185,\"kelis\":309748,\"kelly clarkson\":2304200,\"kelly rowland\":213650,\"kenny rogers\":71701,\"kenny wayne shepherd\":153,\"keri hilson\":213844,\"kevin rudolf\":81029,\"keyshia cole\":243932,\"kid cudi\":462759,\"kid rock\":234475,\"kings of leon\":5655955,\"korn\":16731,\"kris allen\":57234,\"la roux\":280784,\"lady antebellum\":26220,\"lady gaga\":2793937,\"larry gatlin\":162,\"leann rimes\":234504,\"lee ann womack\":38206,\"lee brice\":760,\"less than jake\":1781111,\"lifehouse\":1606706,\"lights\":80230,\"lil' wayne\":1129657,\"linkin park\":12783925,\"lit\":64075,\"little big town\":26886,\"ll cool j\":155234,\"lloyd\":142662,\"lmfao\":48165,\"local natives\":3157,\"logic\":1557,\"lonestar\":62495,\"los lobos\":115375,\"los lonely boys\":35403,\"lotus\":42558,\"ludacris\":776842,\"ludo\":91439,\"luke bryan\":7063,\"lupe fiasco\":1854972,\"macklemore\":10399,\"macy gray\":205739,\"madonna\":7599958,\"marc broussard\":78241,\"marc cohn\":40217,\"mario\":179294,\"mark wills\":10547,\"maroon 5\":2512341,\"martina mcbride\":103586,\"mat kearney\":149848,\"matchbox 20\":259,\"matisyahu\":961959,\"matt & kim\":182761,\"matt nathanson\":356705,\"maxwell\":188714,\"mayday parade\":611574,\"merle haggard\":128514,\"mgmt\":2489198,\"michael franti\":36197,\"michelle branch\":464106,\"mighty mighty bosstones\":86,\"miguel\":1793,\"miike snow\":37101,\"mike gordon\":3481,\"mike posner\":216,\"mims\":54258,\"mindy smith\":47761,\"minus the bear\":1895264,\"miranda lambert\":83369,\"mobb deep\":650853,\"moe\":1047,\"mogwai\":3738107,\"montell jordan\":9130,\"morrissey\":3333603,\"motion city soundtrack\":1518302,\"mumford & sons\":25583,\"muse\":15406105,\"musiq\":234576,\"mute math\":411161,\"nas\":2935156,\"naturally 7\":13400,\"ne-yo\":1158785,\"needtobreathe\":57587,\"new boyz\":72,\"nickel creek\":364577,\"nicki minaj\":8487,\"nitty gritty dirt band\":34,\"no doubt\":1325470,\"norah jones\":3163207,\"ok go\":730862,\"old 97's\":130495,\"olly murs\":46,\"one republic\":1535,\"owl city\":402737,\"ozomatli\":76027,\"p.o.d\":1232108,\"pam tillis\":6384,\"panic! at the disco\":637684,\"paolo nutini\":584338,\"papa roach\":2629981,\"parachute\":11566,\"paramore\":5665097,\"passenger\":47170,\"passion pit\":260170,\"pat benatar\":113547,\"pat green\":33364,\"pat travers\":10811,\"paul wall\":89203,\"pearl jam\":5890493,\"pepper\":208683,\"perpetual groove\":36218,\"phil vassar\":22468,\"phoenix\":1102578,\"pitbull\":220257,\"plain white ts\":534098,\"pleasure p\":15948,\"plies\":139058,\"portugal the man\":98,\"pretty lights\":24907,\"psy\":2536,\"public enemy\":611022,\"puddle of mudd\":353985,\"q-tip\":267259,\"queens of the stone age\":5910488,\"quiet riot\":73034,\"ra ra riot\":160607,\"rascal flatts\":433277,\"ray price\":13350,\"rebirth brass band\":3378,\"red\":314914,\"reel big fish\":1704015,\"regina spektor\":4320968,\"relient k\":1524771,\"rev theory\":28092,\"rhett atkins\":37,\"rick ross\":407934,\"rick springfield\":43347,\"rihanna\":3306883,\"rise against\":6351825,\"rob thomas\":188009,\"robin thicke\":286497,\"rogue wave\":386000,\"rooney\":322974,\"rusted root\":41228,\"sam moore\":951,\"santigold\":14430,\"sara bareilles\":538681,\"sara evans\":54380,\"saving abel\":40605,\"say anything\":1442053,\"sea wolf\":96542,\"sean kingston\":159472,\"sebastian ingrosso\":982,\"secondhand serenade\":549280,\"seether\":1314444,\"selena gomez\":35214,\"sevendust\":589415,\"shakira\":1641137,\"shawn mullins\":30625,\"she wants revenge\":818424,\"shedaisy\":19963,\"sheryl crow\":563184,\"shinedown\":678976,\"shooter jennings\":35370,\"shwayze\":117126,\"sick puppies\":180292,\"silversun pickups\":620163,\"simple plan\":1849652,\"skillet\":910507,\"slash\":2937,\"slightly stoopid\":566201,\"slipknot\":5644425,\"slum village\":288212,\"smash mouth\":323732,\"smashing pumpkins\":10690,\"snow patrol\":4264519,\"solange knowles\":1622,\"soul asylum\":65777,\"soulja boy\":148862,\"spearhead\":23123,\"spoon\":2262308,\"st. vincent\":236856,\"staind\":1256808,\"state radio\":167967,\"steel train\":46453,\"steve aoki\":76918,\"steve miller band\":178950,\"stockholm syndrome\":516,\"stone temple pilots\":955328,\"story of the year\":926057,\"sugar ray\":102416,\"sugarcult\":649480,\"sugarland\":119784,\"sum 41\":3634887,\"surfer blood\":186,\"susan boyle\":2333,\"switchfoot\":1109780,\"t-pain\":389869,\"taio cruz\":106503,\"taking back sunday\":2358591,\"talib kweli\":853753,\"taylor swift\":1173634,\"terri clark\":28941,\"the bravery\":642553,\"the civil wars\":224,\"the dandy warhols\":1118929,\"the dream\":5921,\"the flaming lips\":2351205,\"the fray\":1718387,\"the game\":1610632,\"the killers\":9586864,\"the national\":2995564,\"the neighborhood\":352,\"the offspring\":5897625,\"the roots\":1925167,\"the script\":293233,\"the starting line\":668342,\"the temper trap\":27418,\"the ting tings\":870042,\"the wailers\":27616,\"the wallflowers\":234588,\"the wanted\":298,\"theory of a deadman\":395185,\"third eye blind\":889241,\"three 6 mafia\":623504,\"three days grace\":2106900,\"tiesto\":1451,\"tim mcgraw\":209419,\"toby keith\":171620,\"toby mac\":173,\"toots & the maytals\":97,\"tori amos\":4955975,\"tracy lawrence\":15166,\"train\":200804,\"travis tritt\":25008,\"trey songz\":213205,\"tyga\":26615,\"usher\":922458,\"vampire weekend\":1513819,\"vertical horizon\":248499,\"wale\":205413,\"walk the moon\":135,\"weezer\":2162596,\"willie nelson\":263313,\"wiz khalifa\":45445,\"xzibit\":174595,\"yeasayer\":108621,\"yo gotti\":15126,\"young jeezy\":399013,\"zac brown band\":14191,\"ziggy marley\":75322}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					}
+				},
+				"source": [
+					"%%sql\n",
+					"SELECT SUM(Plays),Artist\n",
+					"FROM uap_part4\n",
+					"GROUP BY Artist"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Change the schema"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"Artist"
+							],
+							"values": [
+								"total_plays"
+							],
+							"yLabel": "total_plays",
+							"xLabel": "Artist",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{\"total_plays\":{\"adventure club\":126,\"all american rejects\":477,\"brantley gilbert\":34,\"chuck leavell\":436,\"creedence clearwater revival\":1857999,\"minus the bear\":1895264,\"nitty gritty dirt band\":34,\"portugal the man\":98,\"stockholm syndrome\":516,\"toots & the maytals\":97}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"SELECT * FROM platform_artist_performance\n",
+					"LIMIT 10"
+				],
+				"execution_count": 41
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"ALTER TABLE platform_artist_performance ADD COLUMNS (albumCount int)"
+				],
+				"execution_count": 40
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## If you REALLY want to drop a column, then no choice but to overwrite (homework for the student :D)\n",
+					""
+				]
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## You can define views as well"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"-- note there isn't something like dataframe.createOrReplacePermanentView()\n",
+					"CREATE VIEW vw_userdetailspercountry AS \n",
+					"SELECT count(UserId) usercount,avg(Age) avg_age,Max(Age) max_age,Min(Age) min_age FROM user_details\n",
+					"GROUP BY Country"
+				],
+				"execution_count": 42
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"spark.sql(\"\"\"CREATE VIEW vw_userdetailspercountry2 AS \n",
+					"SELECT count(UserId) usercount,avg(Age) avg_age,Max(Age) max_age,Min(Age) min_age FROM user_details\n",
+					"GROUP BY Country\"\"\")"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"avg_age"
+							],
+							"values": [
+								"usercount"
+							],
+							"yLabel": "usercount",
+							"xLabel": "avg_age",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{\"usercount\":{\"19\":3,\"20\":5,\"22\":48,\"25\":72,\"26\":14,\"27\":4,\"28\":13,\"31\":13,\"19.333333333333332\":3,\"19.727272727272727\":11,\"20.1\":10,\"20.166666666666668\":6,\"20.4\":5,\"20.5\":16,\"20.53846153846154\":13,\"20.7\":40,\"21.142857142857142\":21,\"21.166666666666668\":6,\"21.23961661341853\":313,\"21.285714285714285\":14,\"21.325240263024785\":1977,\"21.4275092936803\":269,\"21.596153846153847\":52,\"21.615384615384617\":13,\"21.684393063583816\":1730,\"21.696296296296296\":135,\"21.70967741935484\":31,\"21.727272727272727\":11,\"21.738095238095237\":42,\"21.76923076923077\":13,\"21.827487473156765\":2794,\"21.873015873015873\":126,\"21.88888888888889\":9,\"21.893260038240918\":20920,\"22.01626860505365\":11556,\"22.12\":25,\"22.125\":16,\"22.194974003466204\":1154,\"22.284569138276552\":499,\"22.307692307692307\":13,\"22.3125\":16,\"22.333333333333332\":3,\"22.38888888888889\":18,\"22.42105263157895\":19,\"22.42759597390117\":19771,\"22.444444444444443\":9,\"22.46268656716418\":67,\"22.464905037159372\":1211,\"22.49518922386145\":1559,\"22.5\":4,\"22.517241379310345\":29,\"22.518576661433805\":1911,\"22.523809523809526\":21,\"22.547292143401982\":2622,\"22.551724137931036\":29,\"22.6\":5,\"22.612648221343875\":253,\"22.636363636363637\":11,\"22.63888888888889\":72,\"22.646935348446682\":4764,\"22.692307692307693\":13,\"22.722371967654986\":371,\"22.727272727272727\":33,\"22.73076923076923\":26,\"22.744897959183675\":98,\"22.772727272727273\":22,\"22.77777777777778\":9,\"22.784674329501915\":1305,\"22.78558394160584\":4384,\"22.857142857142858\":14,\"22.869565217391305\":23,\"22.919354838709676\":62,\"22.928571428571427\":28,\"22.93975903614458\":166,\"22.970193740685545\":671,\"23.032608695652176\":92,\"23.047619047619047\":21,\"23.105263157894736\":38,\"23.210045662100455\":219,\"23.25\":16,\"23.285714285714285\":28,\"23.292744252873565\":2784,\"23.318147251987558\":14465,\"23.357142857142858\":14,\"23.40404892450443\":7113,\"23.42205410362219\":13086,\"23.46153846153846\":13,\"23.464285714285715\":28,\"23.492790194664742\":2774,\"23.5\":28,\"23.555555555555557\":54,\"23.575342465753426\":73,\"23.580645161290324\":31,\"23.59090909090909\":22,\"23.595744680851062\":47,\"23.62930186823992\":1017,\"23.642857142857142\":14,\"23.692307692307693\":13,\"23.7\":30,\"23.70578231292517\":1176,\"23.720836685438456\":1243,\"23.7318718381113\":593,\"23.76566757493188\":367,\"23.766666666666666\":30,\"23.78680203045685\":197,\"23.818181818181817\":11,\"23.847826086956523\":46,\"23.860976083997667\":5143,\"23.90344827586207\":290,\"23.914285714285715\":35,\"23.914634146341463\":82,\"23.92885973763875\":1982,\"24.05301204819277\":415,\"24.062166962699823\":563,\"24.06451612903226\":62,\"24.071428571428573\":28,\"24.090456911509545\":8645,\"24.132183908045977\":348,\"24.19047619047619\":21,\"24.22222222222222\":9,\"24.227272727272727\":110,\"24.23294117647059\":425,\"24.285714285714285\":7,\"24.294117647058822\":51,\"24.304347826086957\":23,\"24.346153846153847\":52,\"24.353715898400754\":3189,\"24.3602878245158\":31547,\"24.37424171721885\":6429,\"24.375\":8,\"24.44141689373297\":1835,\"24.470588235294116\":34,\"24.475409836065573\":61,\"24.488505747126435\":174,\"24.545454545454547\":11,\"24.571666666666665\":600,\"24.590701436424368\":66763,\"24.636363636363637\":110,\"24.652670962377883\":4811,\"24.666666666666668\":45,\"24.68421052631579\":19,\"24.69607843137255\":102,\"24.739583333333332\":96,\"24.740286298568506\":489,\"24.790697674418606\":129,\"24.807692307692307\":26,\"24.835894283958204\":1627,\"24.892857142857142\":196,\"24.89328537170264\":2502,\"24.93015214384509\":1446,\"24.964285714285715\":28,\"25.019138755980862\":209,\"25.03409090909091\":88,\"25.047619047619047\":63,\"25.076923076923077\":52,\"25.092879256965944\":323,\"25.111017831357668\":29779,\"25.125\":8,\"25.20408163265306\":49,\"25.229573010015816\":3794,\"25.259098316132537\":1841,\"25.275\":40,\"25.285714285714285\":28,\"25.306122448979593\":49,\"25.324447829398324\":2626,\"25.34299667497922\":9624,\"25.352941176470587\":17,\"25.360189573459717\":422,\"25.4\":20,\"25.442048517520217\":742,\"25.458333333333332\":24,\"25.539473684210527\":76,\"25.571428571428573\":21,\"25.57894736842105\":19,\"25.59849300322928\":13006,\"25.624013157894737\":3040,\"25.64735718099306\":7492,\"25.658684449833284\":6598,\"25.661538461538463\":130,\"25.71875\":32,\"25.771428571428572\":35,\"25.797619047619047\":84,\"25.82758620689655\":58,\"25.914634146341463\":82,\"25.941176470588236\":34,\"25.97741935483871\":620,\"26.042649606823936\":7503,\"26.065217391304348\":46,\"26.130434782608695\":23,\"26.18840579710145\":69,\"26.275862068965516\":29,\"26.361216730038024\":263,\"26.53125\":32,\"26.6\":5,\"26.604395604395606\":91,\"26.714285714285715\":21,\"26.775\":40,\"26.933333333333334\":30,\"26.967741935483872\":31,\"27.06896551724138\":29,\"27.076923076923077\":13,\"27.11111111111111\":9,\"27.153846153846153\":13,\"27.17241379310345\":29,\"27.294117647058822\":17,\"27.41025641025641\":117,\"27.474358974358974\":78,\"27.53846153846154\":13,\"27.612903225806452\":31,\"27.696969696969695\":33,\"27.75\":8,\"27.88888888888889\":9,\"28.136363636363637\":22,\"28.166666666666668\":24,\"28.28\":25,\"28.4\":20,\"28.6\":5,\"28.77777777777778\":9,\"28.857142857142858\":21,\"29.181818181818183\":22,\"29.22222222222222\":9,\"29.272727272727273\":11,\"29.41176470588235\":17,\"29.625\":8,\"30.027027027027028\":37,\"30.166666666666668\":12,\"30.642857142857142\":14,\"30.77777777777778\":9,\"31.142857142857142\":28,\"31.166666666666668\":6,\"32.25\":8,\"34.6\":5,\"34.625\":8,\"40.111111111111114\":9}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"select * from vw_userdetailspercountry\n",
+					"order by usercount desc"
+				],
+				"execution_count": 43
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## With some research you can easily process almost any file type\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"from pyspark.ml.image import ImageSchema\n",
+					"\n",
+					"image_df = ImageSchema.readImages(\"/musicdata/albumImages/\")\n",
+					"image_df.printSchema()\n",
+					"image_df.select(\"image.origin\",\"image.height\",\"image.width\").show()"
+				],
+				"execution_count": 44
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Cache and persist\n",
+					"This is critical to understand when dealing with true big data\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"# this is equivalent to persist(MEMORY_AND_DISK)\n",
+					"user_details_df = spark.sql(\"SELECT * FROM user_details\")\n",
+					"user_details_df.cache() #this is lazy caching"
+				],
+				"execution_count": 45
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"user_details_df.count() # this action pulls the data"
+				],
+				"execution_count": 46
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Persist levels\n",
+					"MEMORY_ONLY – This is the default behavior of the RDD cache() method and stores the RDD or DataFrame as deserialized objects to JVM memory. When there is no enough memory available it will not save DataFrame of some partitions and these will be re-computed as and when required. This takes more memory. but unlike RDD, this would be slower than MEMORY_AND_DISK level as it recomputes the unsaved partitions and recomputing the in-memory columnar representation of the underlying table is expensive\n",
+					"\n",
+					"MEMORY_ONLY_SER – This is the same as MEMORY_ONLY but the difference being it stores RDD as serialized objects to JVM memory. It takes lesser memory (space-efficient) then MEMORY_ONLY as it saves objects as serialized and takes an additional few more CPU cycles in order to deserialize.\n",
+					"\n",
+					"MEMORY_ONLY_2 – Same as MEMORY_ONLY storage level but replicate each partition to two cluster nodes.\n",
+					"\n",
+					"MEMORY_ONLY_SER_2 – Same as MEMORY_ONLY_SER storage level but replicate each partition to two cluster nodes.\n",
+					"\n",
+					"MEMORY_AND_DISK – This is the default behavior of the DataFrame or Dataset. In this Storage Level, The DataFrame will be stored in JVM memory as a deserialized objects. When required storage is greater than available memory, it stores some of the excess partitions into disk and reads the data from disk when it required. It is slower as there is I/O involved.\n",
+					"\n",
+					"MEMORY_AND_DISK_SER – This is same as MEMORY_AND_DISK storage level difference being it serializes the DataFrame objects in memory and on disk when space not available.\n",
+					"\n",
+					"MEMORY_AND_DISK_2 – Same as MEMORY_AND_DISK storage level but replicate each partition to two cluster nodes.\n",
+					"\n",
+					"MEMORY_AND_DISK_SER_2 – Same as MEMORY_AND_DISK_SER storage level but replicate each partition to two cluster nodes.\n",
+					"\n",
+					"DISK_ONLY – In this storage level, DataFrame is stored only on disk and the CPU computation time is high as I/O involved.\n",
+					"\n",
+					"DISK_ONLY_2 – Same as DISK_ONLY storage level but replicate each partition to two cluster nodes.\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"from pyspark import StorageLevel\n",
+					"\n",
+					"user_details_df.unpersist()\n",
+					"user_details_df.persist(StorageLevel.DISK_ONLY)\n",
+					"user_details_df.count()\n",
+					""
+				],
+				"execution_count": 47
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## You can cache in SQL too\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"Artist"
+							],
+							"values": [
+								"allPlays"
+							],
+							"yLabel": "allPlays",
+							"xLabel": "Artist",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{\"allPlays\":{\"311\":1051805,\"3 doors down\":2422409,\"30 seconds to mars\":3312611,\"38 special\":160,\"50 cent\":1968379,\"aaron tippin\":5601,\"adam lambert\":111644,\"adele\":815078,\"adventure club\":126,\"afrojack\":2337,\"akon\":1257062,\"alanis morrisette\":11,\"alicia keys\":1787881,\"alien ant farm\":319176,\"all american rejects\":477,\"all time low\":1304573,\"allen stone\":200,\"aloe blacc\":21998,\"amerie\":238116,\"anberlin\":2186237,\"andrew bird\":2486325,\"andrew wk\":41,\"andy grammer\":340,\"ani difranco\":1534271,\"anthony hamilton\":205704,\"arcade fire\":4341747,\"arctic monkeys\":8372088,\"arrested development\":84737,\"ashanti\":265077,\"asher roth\":112847,\"augustana\":541240,\"avenged sevenfold\":2580219,\"avicii\":138,\"axwell\":44062,\"b.o.b\":3935,\"baby bash\":32915,\"barenaked ladies\":1394330,\"bassnectar\":74177,\"bastille\":339,\"beenie man\":136452,\"beirut\":3888458,\"ben folds\":1695852,\"ben harper\":1182942,\"ben kweller\":493317,\"ben rector\":311,\"better than ezra\":186052,\"between the trees\":63620,\"big & rich\":71210,\"big boi\":21929,\"big sean\":22357,\"billy currington\":17167,\"billy ray cyrus\":19962,\"biz markie\":17001,\"black crowes\":12,\"black eyed peas\":1639824,\"blackberry smoke\":2811,\"blake lewis\":147571,\"blake shelton\":36442,\"blue october\":550047,\"blues traveler\":138090,\"bob dylan\":9417200,\"bob schneider\":51440,\"bobby valentino\":139024,\"bon jovi\":2373749,\"bonnie raitt\":112002,\"borgore\":4175,\"bowling for soup\":708583,\"boys like girls\":847510,\"brantley gilbert\":34,\"breaking benjamin\":2846099,\"breathe carolina\":228267,\"bret michaels\":7952,\"brett dennen\":154196,\"britney spears\":7462144,\"broken social scene\":2912713,\"brooke valentine\":14577,\"bruce hornsby\":60035,\"bruce springsteen\":3768893,\"busta rhymes\":623827,\"c2c\":1474,\"cage the elephant\":47242,\"caifanes\":168355,\"cake\":2162565,\"calvin harris\":406144,\"candlebox\":93009,\"carly rae jepsen\":2340,\"carolina liar\":73960,\"carrie underwood\":609809,\"cartel\":655506,\"cash money\":2291,\"cat power\":4031563,\"chamillionaire\":813428,\"charlie daniels band\":22551,\"charlie mars\":1588,\"cheap trick\":195338,\"chevelle\":912024,\"chiddy bang\":5609,\"childish gambino\":1150,\"chingy\":102669,\"chris botti\":190851,\"chris brown\":1157023,\"chris cornell\":498130,\"chris young\":4721,\"christina aguilera\":2677950,\"chromeo\":461278,\"chuck leavell\":436,\"churchill\":332,\"ciara\":461670,\"circa survive\":1231859,\"citizen\":1226,\"clay aiken\":63237,\"clint black\":25852,\"clipse\":367554,\"cloud cult\":446039,\"clutch\":0,\"cobra starship\":1030937,\"coheed & cambria\":1861,\"colby odonis\":29350,\"cold war kids\":673095,\"coldplay\":16659495,\"collective soul\":443468,\"colt ford\":537,\"common\":1645152,\"coolio\":42675,\"corey smith\":16837,\"counting crows\":1682816,\"cowboy mouth\":26974,\"cracker\":73215,\"craig morgan\":10940,\"creed\":759849,\"creedence clearwater revival\":1857999,\"da brat\":3561,\"damian marley\":562242,\"danny brown\":4125,\"danny gokey\":2913,\"darius rucker\":9591,\"daughtry\":454184,\"dave matthews\":149303,\"david banner\":73765,\"david cook\":425194,\"david gray\":702706,\"david guetta\":1010269,\"de la soul\":872886,\"deadmau5\":346375,\"death cab for cutie\":10555632,\"default\":118543,\"demi lovato\":282909,\"devotchka\":488285,\"diamond rio\":22541,\"dierks bentley\":88263,\"dionne warwick\":76770,\"disco biscuits\":11804,\"dispatch\":459782,\"disturbed\":5144597,\"dj shadow\":1942522,\"don williams\":24909,\"drake\":263747,\"drive by truckers\":36,\"dropkick murphys\":3173813,\"drowning pool\":637555,\"duncan sheik\":86654,\"eagles of death metal\":876802,\"editors\":1831296,\"edwin mccain\":33582,\"eli young band\":17581,\"ellie goulding\":2670,\"elvis crespo\":15367,\"emerson drive\":18114,\"eric church\":16548,\"eric hutchinson\":61486,\"erykah badu\":1094426,\"eve 6\":235712,\"everclear\":392081,\"everlast\":411360,\"fabolous\":338228,\"faith evans\":68688,\"faith hill\":162388,\"fall out boy\":6673759,\"family force five\":132,\"fantasia\":47553,\"far east movement\":4178,\"fastball\":59963,\"fat joe\":134605,\"feed me\":3764,\"feist\":4180818,\"filter\":255013,\"finger eleven\":366860,\"five for fighting\":226028,\"flo rida\":389053,\"flobots\":246486,\"flogging molly\":2240713,\"flyleaf\":1168251,\"fonseca\":39243,\"foreigner\":266008,\"fountains of wayne\":457328,\"four year strong\":404578,\"french montana\":1916,\"fuel\":329599,\"future\":6,\"g. love\":55717,\"galactic\":95659,\"gary allan\":79579,\"gaslight anthem\":5723,\"gavin degraw\":503053,\"george clinton\":21968,\"ghostface\":795590,\"gin blossoms\":108730,\"girl talk\":1642798,\"gloriana\":8872,\"godsmack\":1415806,\"gogol bordello\":1436851,\"goldfinger\":866540,\"gomez\":524926,\"goo goo dolls\":1464775,\"gotye\":108641,\"greenday\":2,\"gretchen wilson\":26974,\"grizzly bear\":1005408,\"gucci mane\":148057,\"gym class heroes\":1050863,\"hal ketchum\":1832,\"hanson\":552183,\"hellogoodbye\":972628,\"holy ghost!\":1143,\"hoobastank\":1110416,\"hot chelle rae\":23,\"howie day\":261764,\"ice cube\":815312,\"incubus\":6354554,\"india arie\":45,\"indigo girls\":397282,\"ingrid michaelson\":422010,\"j. holiday\":129269,\"ja rule\":147406,\"jack ingram\":20722,\"jadakiss\":158051,\"jakob dylan\":33804,\"james blunt\":1819929,\"james otto\":5878,\"jason derulo\":857,\"jason michael carroll\":6577,\"jay sean\":166844,\"jefferson starship\":13705,\"jeremih\":3985,\"jessica simpson\":186945,\"jet\":578865,\"jewel\":470525,\"jill scott\":463765,\"jo dee messina\":28974,\"joan jett\":20337,\"john anderson\":12894,\"john legend\":1078821,\"john mayer\":3446253,\"jon mclaughlin\":178655,\"jonathan davis\":39045,\"josh gracin\":13107,\"josh groban\":528724,\"josh turner\":45101,\"joshua radin\":672391,\"juanes\":450261,\"juicy j\":13706,\"julian marley\":7216,\"jurassic 5\":992727,\"justin bieber\":1174,\"justin moore\":50,\"justin nozuka\":119239,\"justin timberlake\":2178677,\"kaiser chiefs\":2268915,\"kaki king\":502763,\"kanye west\":6354476,\"kaskade\":382269,\"kate voegele\":215042,\"katy perry\":1614750,\"ke$ha\":4487,\"keith anderson\":8357,\"keith urban\":237185,\"kelis\":309748,\"kelly clarkson\":2304200,\"kelly rowland\":213650,\"kenny rogers\":71701,\"kenny wayne shepherd\":153,\"keri hilson\":213844,\"kevin rudolf\":81029,\"keyshia cole\":243932,\"kid cudi\":462759,\"kid rock\":234475,\"kings of leon\":5655955,\"korn\":16731,\"kris allen\":57234,\"la roux\":280784,\"lady antebellum\":26220,\"lady gaga\":2793937,\"larry gatlin\":162,\"leann rimes\":234504,\"lee ann womack\":38206,\"lee brice\":760,\"less than jake\":1781111,\"lifehouse\":1606706,\"lights\":80230,\"lil' wayne\":1129657,\"linkin park\":12783925,\"lit\":64075,\"little big town\":26886,\"ll cool j\":155234,\"lloyd\":142662,\"lmfao\":48165,\"local natives\":3157,\"logic\":1557,\"lonestar\":62495,\"los lobos\":115375,\"los lonely boys\":35403,\"lotus\":42558,\"ludacris\":776842,\"ludo\":91439,\"luke bryan\":7063,\"lupe fiasco\":1854972,\"macklemore\":10399,\"macy gray\":205739,\"madonna\":7599958,\"marc broussard\":78241,\"marc cohn\":40217,\"mario\":179294,\"mark wills\":10547,\"maroon 5\":2512341,\"martina mcbride\":103586,\"mat kearney\":149848,\"matchbox 20\":259,\"matisyahu\":961959,\"matt & kim\":182761,\"matt nathanson\":356705,\"maxwell\":188714,\"mayday parade\":611574,\"merle haggard\":128514,\"mgmt\":2489198,\"michael franti\":36197,\"michelle branch\":464106,\"mighty mighty bosstones\":86,\"miguel\":1793,\"miike snow\":37101,\"mike gordon\":3481,\"mike posner\":216,\"mims\":54258,\"mindy smith\":47761,\"minus the bear\":1895264,\"miranda lambert\":83369,\"mobb deep\":650853,\"moe\":1047,\"mogwai\":3738107,\"montell jordan\":9130,\"morrissey\":3333603,\"motion city soundtrack\":1518302,\"mumford & sons\":25583,\"muse\":15406105,\"musiq\":234576,\"mute math\":411161,\"nas\":2935156,\"naturally 7\":13400,\"ne-yo\":1158785,\"needtobreathe\":57587,\"new boyz\":72,\"nickel creek\":364577,\"nicki minaj\":8487,\"nitty gritty dirt band\":34,\"no doubt\":1325470,\"norah jones\":3163207,\"ok go\":730862,\"old 97's\":130495,\"olly murs\":46,\"one republic\":1535,\"owl city\":402737,\"ozomatli\":76027,\"p.o.d\":1232108,\"pam tillis\":6384,\"panic! at the disco\":637684,\"paolo nutini\":584338,\"papa roach\":2629981,\"parachute\":11566,\"paramore\":5665097,\"passenger\":47170,\"passion pit\":260170,\"pat benatar\":113547,\"pat green\":33364,\"pat travers\":10811,\"paul wall\":89203,\"pearl jam\":5890493,\"pepper\":208683,\"perpetual groove\":36218,\"phil vassar\":22468,\"phoenix\":1102578,\"pitbull\":220257,\"plain white ts\":534098,\"pleasure p\":15948,\"plies\":139058,\"portugal the man\":98,\"pretty lights\":24907,\"psy\":2536,\"public enemy\":611022,\"puddle of mudd\":353985,\"q-tip\":267259,\"queens of the stone age\":5910488,\"quiet riot\":73034,\"ra ra riot\":160607,\"rascal flatts\":433277,\"ray price\":13350,\"rebirth brass band\":3378,\"red\":314914,\"reel big fish\":1704015,\"regina spektor\":4320968,\"relient k\":1524771,\"rev theory\":28092,\"rhett atkins\":37,\"rick ross\":407934,\"rick springfield\":43347,\"rihanna\":3306883,\"rise against\":6351825,\"rob thomas\":188009,\"robin thicke\":286497,\"rogue wave\":386000,\"rooney\":322974,\"rusted root\":41228,\"sam moore\":951,\"santigold\":14430,\"sara bareilles\":538681,\"sara evans\":54380,\"saving abel\":40605,\"say anything\":1442053,\"sea wolf\":96542,\"sean kingston\":159472,\"sebastian ingrosso\":982,\"secondhand serenade\":549280,\"seether\":1314444,\"selena gomez\":35214,\"sevendust\":589415,\"shakira\":1641137,\"shawn mullins\":30625,\"she wants revenge\":818424,\"shedaisy\":19963,\"sheryl crow\":563184,\"shinedown\":678976,\"shooter jennings\":35370,\"shwayze\":117126,\"sick puppies\":180292,\"silversun pickups\":620163,\"simple plan\":1849652,\"skillet\":910507,\"slash\":2937,\"slightly stoopid\":566201,\"slipknot\":5644425,\"slum village\":288212,\"smash mouth\":323732,\"smashing pumpkins\":10690,\"snow patrol\":4264519,\"solange knowles\":1622,\"soul asylum\":65777,\"soulja boy\":148862,\"spearhead\":23123,\"spoon\":2262308,\"st. vincent\":236856,\"staind\":1256808,\"state radio\":167967,\"steel train\":46453,\"steve aoki\":76918,\"steve miller band\":178950,\"stockholm syndrome\":516,\"stone temple pilots\":955328,\"story of the year\":926057,\"sugar ray\":102416,\"sugarcult\":649480,\"sugarland\":119784,\"sum 41\":3634887,\"surfer blood\":186,\"susan boyle\":2333,\"switchfoot\":1109780,\"t-pain\":389869,\"taio cruz\":106503,\"taking back sunday\":2358591,\"talib kweli\":853753,\"taylor swift\":1173634,\"terri clark\":28941,\"the bravery\":642553,\"the civil wars\":224,\"the dandy warhols\":1118929,\"the dream\":5921,\"the flaming lips\":2351205,\"the fray\":1718387,\"the game\":1610632,\"the killers\":9586864,\"the national\":2995564,\"the neighborhood\":352,\"the offspring\":5897625,\"the roots\":1925167,\"the script\":293233,\"the starting line\":668342,\"the temper trap\":27418,\"the ting tings\":870042,\"the wailers\":27616,\"the wallflowers\":234588,\"the wanted\":298,\"theory of a deadman\":395185,\"third eye blind\":889241,\"three 6 mafia\":623504,\"three days grace\":2106900,\"tiesto\":1451,\"tim mcgraw\":209419,\"toby keith\":171620,\"toby mac\":173,\"toots & the maytals\":97,\"tori amos\":4955975,\"tracy lawrence\":15166,\"train\":200804,\"travis tritt\":25008,\"trey songz\":213205,\"tyga\":26615,\"usher\":922458,\"vampire weekend\":1513819,\"vertical horizon\":248499,\"wale\":205413,\"walk the moon\":135,\"weezer\":2162596,\"willie nelson\":263313,\"wiz khalifa\":45445,\"xzibit\":174595,\"yeasayer\":108621,\"yo gotti\":15126,\"young jeezy\":399013,\"zac brown band\":14191,\"ziggy marley\":75322}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"SELECT sum(plays) allPlays, Artist \n",
+					"FROM usersartistplays_partitioned\n",
+					"GROUP BY Artist"
+				],
+				"execution_count": 48
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"CACHE TABLE usersartistplays_partitioned -- this is eager caching, you could do CACHE LAZY TABLE if you want"
+				],
+				"execution_count": 49
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"Artist"
+							],
+							"values": [
+								"allPlays"
+							],
+							"yLabel": "allPlays",
+							"xLabel": "Artist",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{\"allPlays\":{\"311\":1051805,\"3 doors down\":2422409,\"30 seconds to mars\":3312611,\"38 special\":160,\"50 cent\":1968379,\"aaron tippin\":5601,\"adam lambert\":111644,\"adele\":815078,\"adventure club\":126,\"afrojack\":2337,\"akon\":1257062,\"alanis morrisette\":11,\"alicia keys\":1787881,\"alien ant farm\":319176,\"all american rejects\":477,\"all time low\":1304573,\"allen stone\":200,\"aloe blacc\":21998,\"amerie\":238116,\"anberlin\":2186237,\"andrew bird\":2486325,\"andrew wk\":41,\"andy grammer\":340,\"ani difranco\":1534271,\"anthony hamilton\":205704,\"arcade fire\":4341747,\"arctic monkeys\":8372088,\"arrested development\":84737,\"ashanti\":265077,\"asher roth\":112847,\"augustana\":541240,\"avenged sevenfold\":2580219,\"avicii\":138,\"axwell\":44062,\"b.o.b\":3935,\"baby bash\":32915,\"barenaked ladies\":1394330,\"bassnectar\":74177,\"bastille\":339,\"beenie man\":136452,\"beirut\":3888458,\"ben folds\":1695852,\"ben harper\":1182942,\"ben kweller\":493317,\"ben rector\":311,\"better than ezra\":186052,\"between the trees\":63620,\"big & rich\":71210,\"big boi\":21929,\"big sean\":22357,\"billy currington\":17167,\"billy ray cyrus\":19962,\"biz markie\":17001,\"black crowes\":12,\"black eyed peas\":1639824,\"blackberry smoke\":2811,\"blake lewis\":147571,\"blake shelton\":36442,\"blue october\":550047,\"blues traveler\":138090,\"bob dylan\":9417200,\"bob schneider\":51440,\"bobby valentino\":139024,\"bon jovi\":2373749,\"bonnie raitt\":112002,\"borgore\":4175,\"bowling for soup\":708583,\"boys like girls\":847510,\"brantley gilbert\":34,\"breaking benjamin\":2846099,\"breathe carolina\":228267,\"bret michaels\":7952,\"brett dennen\":154196,\"britney spears\":7462144,\"broken social scene\":2912713,\"brooke valentine\":14577,\"bruce hornsby\":60035,\"bruce springsteen\":3768893,\"busta rhymes\":623827,\"c2c\":1474,\"cage the elephant\":47242,\"caifanes\":168355,\"cake\":2162565,\"calvin harris\":406144,\"candlebox\":93009,\"carly rae jepsen\":2340,\"carolina liar\":73960,\"carrie underwood\":609809,\"cartel\":655506,\"cash money\":2291,\"cat power\":4031563,\"chamillionaire\":813428,\"charlie daniels band\":22551,\"charlie mars\":1588,\"cheap trick\":195338,\"chevelle\":912024,\"chiddy bang\":5609,\"childish gambino\":1150,\"chingy\":102669,\"chris botti\":190851,\"chris brown\":1157023,\"chris cornell\":498130,\"chris young\":4721,\"christina aguilera\":2677950,\"chromeo\":461278,\"chuck leavell\":436,\"churchill\":332,\"ciara\":461670,\"circa survive\":1231859,\"citizen\":1226,\"clay aiken\":63237,\"clint black\":25852,\"clipse\":367554,\"cloud cult\":446039,\"clutch\":0,\"cobra starship\":1030937,\"coheed & cambria\":1861,\"colby odonis\":29350,\"cold war kids\":673095,\"coldplay\":16659495,\"collective soul\":443468,\"colt ford\":537,\"common\":1645152,\"coolio\":42675,\"corey smith\":16837,\"counting crows\":1682816,\"cowboy mouth\":26974,\"cracker\":73215,\"craig morgan\":10940,\"creed\":759849,\"creedence clearwater revival\":1857999,\"da brat\":3561,\"damian marley\":562242,\"danny brown\":4125,\"danny gokey\":2913,\"darius rucker\":9591,\"daughtry\":454184,\"dave matthews\":149303,\"david banner\":73765,\"david cook\":425194,\"david gray\":702706,\"david guetta\":1010269,\"de la soul\":872886,\"deadmau5\":346375,\"death cab for cutie\":10555632,\"default\":118543,\"demi lovato\":282909,\"devotchka\":488285,\"diamond rio\":22541,\"dierks bentley\":88263,\"dionne warwick\":76770,\"disco biscuits\":11804,\"dispatch\":459782,\"disturbed\":5144597,\"dj shadow\":1942522,\"don williams\":24909,\"drake\":263747,\"drive by truckers\":36,\"dropkick murphys\":3173813,\"drowning pool\":637555,\"duncan sheik\":86654,\"eagles of death metal\":876802,\"editors\":1831296,\"edwin mccain\":33582,\"eli young band\":17581,\"ellie goulding\":2670,\"elvis crespo\":15367,\"emerson drive\":18114,\"eric church\":16548,\"eric hutchinson\":61486,\"erykah badu\":1094426,\"eve 6\":235712,\"everclear\":392081,\"everlast\":411360,\"fabolous\":338228,\"faith evans\":68688,\"faith hill\":162388,\"fall out boy\":6673759,\"family force five\":132,\"fantasia\":47553,\"far east movement\":4178,\"fastball\":59963,\"fat joe\":134605,\"feed me\":3764,\"feist\":4180818,\"filter\":255013,\"finger eleven\":366860,\"five for fighting\":226028,\"flo rida\":389053,\"flobots\":246486,\"flogging molly\":2240713,\"flyleaf\":1168251,\"fonseca\":39243,\"foreigner\":266008,\"fountains of wayne\":457328,\"four year strong\":404578,\"french montana\":1916,\"fuel\":329599,\"future\":6,\"g. love\":55717,\"galactic\":95659,\"gary allan\":79579,\"gaslight anthem\":5723,\"gavin degraw\":503053,\"george clinton\":21968,\"ghostface\":795590,\"gin blossoms\":108730,\"girl talk\":1642798,\"gloriana\":8872,\"godsmack\":1415806,\"gogol bordello\":1436851,\"goldfinger\":866540,\"gomez\":524926,\"goo goo dolls\":1464775,\"gotye\":108641,\"greenday\":2,\"gretchen wilson\":26974,\"grizzly bear\":1005408,\"gucci mane\":148057,\"gym class heroes\":1050863,\"hal ketchum\":1832,\"hanson\":552183,\"hellogoodbye\":972628,\"holy ghost!\":1143,\"hoobastank\":1110416,\"hot chelle rae\":23,\"howie day\":261764,\"ice cube\":815312,\"incubus\":6354554,\"india arie\":45,\"indigo girls\":397282,\"ingrid michaelson\":422010,\"j. holiday\":129269,\"ja rule\":147406,\"jack ingram\":20722,\"jadakiss\":158051,\"jakob dylan\":33804,\"james blunt\":1819929,\"james otto\":5878,\"jason derulo\":857,\"jason michael carroll\":6577,\"jay sean\":166844,\"jefferson starship\":13705,\"jeremih\":3985,\"jessica simpson\":186945,\"jet\":578865,\"jewel\":470525,\"jill scott\":463765,\"jo dee messina\":28974,\"joan jett\":20337,\"john anderson\":12894,\"john legend\":1078821,\"john mayer\":3446253,\"jon mclaughlin\":178655,\"jonathan davis\":39045,\"josh gracin\":13107,\"josh groban\":528724,\"josh turner\":45101,\"joshua radin\":672391,\"juanes\":450261,\"juicy j\":13706,\"julian marley\":7216,\"jurassic 5\":992727,\"justin bieber\":1174,\"justin moore\":50,\"justin nozuka\":119239,\"justin timberlake\":2178677,\"kaiser chiefs\":2268915,\"kaki king\":502763,\"kanye west\":6354476,\"kaskade\":382269,\"kate voegele\":215042,\"katy perry\":1614750,\"ke$ha\":4487,\"keith anderson\":8357,\"keith urban\":237185,\"kelis\":309748,\"kelly clarkson\":2304200,\"kelly rowland\":213650,\"kenny rogers\":71701,\"kenny wayne shepherd\":153,\"keri hilson\":213844,\"kevin rudolf\":81029,\"keyshia cole\":243932,\"kid cudi\":462759,\"kid rock\":234475,\"kings of leon\":5655955,\"korn\":16731,\"kris allen\":57234,\"la roux\":280784,\"lady antebellum\":26220,\"lady gaga\":2793937,\"larry gatlin\":162,\"leann rimes\":234504,\"lee ann womack\":38206,\"lee brice\":760,\"less than jake\":1781111,\"lifehouse\":1606706,\"lights\":80230,\"lil' wayne\":1129657,\"linkin park\":12783925,\"lit\":64075,\"little big town\":26886,\"ll cool j\":155234,\"lloyd\":142662,\"lmfao\":48165,\"local natives\":3157,\"logic\":1557,\"lonestar\":62495,\"los lobos\":115375,\"los lonely boys\":35403,\"lotus\":42558,\"ludacris\":776842,\"ludo\":91439,\"luke bryan\":7063,\"lupe fiasco\":1854972,\"macklemore\":10399,\"macy gray\":205739,\"madonna\":7599958,\"marc broussard\":78241,\"marc cohn\":40217,\"mario\":179294,\"mark wills\":10547,\"maroon 5\":2512341,\"martina mcbride\":103586,\"mat kearney\":149848,\"matchbox 20\":259,\"matisyahu\":961959,\"matt & kim\":182761,\"matt nathanson\":356705,\"maxwell\":188714,\"mayday parade\":611574,\"merle haggard\":128514,\"mgmt\":2489198,\"michael franti\":36197,\"michelle branch\":464106,\"mighty mighty bosstones\":86,\"miguel\":1793,\"miike snow\":37101,\"mike gordon\":3481,\"mike posner\":216,\"mims\":54258,\"mindy smith\":47761,\"minus the bear\":1895264,\"miranda lambert\":83369,\"mobb deep\":650853,\"moe\":1047,\"mogwai\":3738107,\"montell jordan\":9130,\"morrissey\":3333603,\"motion city soundtrack\":1518302,\"mumford & sons\":25583,\"muse\":15406105,\"musiq\":234576,\"mute math\":411161,\"nas\":2935156,\"naturally 7\":13400,\"ne-yo\":1158785,\"needtobreathe\":57587,\"new boyz\":72,\"nickel creek\":364577,\"nicki minaj\":8487,\"nitty gritty dirt band\":34,\"no doubt\":1325470,\"norah jones\":3163207,\"ok go\":730862,\"old 97's\":130495,\"olly murs\":46,\"one republic\":1535,\"owl city\":402737,\"ozomatli\":76027,\"p.o.d\":1232108,\"pam tillis\":6384,\"panic! at the disco\":637684,\"paolo nutini\":584338,\"papa roach\":2629981,\"parachute\":11566,\"paramore\":5665097,\"passenger\":47170,\"passion pit\":260170,\"pat benatar\":113547,\"pat green\":33364,\"pat travers\":10811,\"paul wall\":89203,\"pearl jam\":5890493,\"pepper\":208683,\"perpetual groove\":36218,\"phil vassar\":22468,\"phoenix\":1102578,\"pitbull\":220257,\"plain white ts\":534098,\"pleasure p\":15948,\"plies\":139058,\"portugal the man\":98,\"pretty lights\":24907,\"psy\":2536,\"public enemy\":611022,\"puddle of mudd\":353985,\"q-tip\":267259,\"queens of the stone age\":5910488,\"quiet riot\":73034,\"ra ra riot\":160607,\"rascal flatts\":433277,\"ray price\":13350,\"rebirth brass band\":3378,\"red\":314914,\"reel big fish\":1704015,\"regina spektor\":4320968,\"relient k\":1524771,\"rev theory\":28092,\"rhett atkins\":37,\"rick ross\":407934,\"rick springfield\":43347,\"rihanna\":3306883,\"rise against\":6351825,\"rob thomas\":188009,\"robin thicke\":286497,\"rogue wave\":386000,\"rooney\":322974,\"rusted root\":41228,\"sam moore\":951,\"santigold\":14430,\"sara bareilles\":538681,\"sara evans\":54380,\"saving abel\":40605,\"say anything\":1442053,\"sea wolf\":96542,\"sean kingston\":159472,\"sebastian ingrosso\":982,\"secondhand serenade\":549280,\"seether\":1314444,\"selena gomez\":35214,\"sevendust\":589415,\"shakira\":1641137,\"shawn mullins\":30625,\"she wants revenge\":818424,\"shedaisy\":19963,\"sheryl crow\":563184,\"shinedown\":678976,\"shooter jennings\":35370,\"shwayze\":117126,\"sick puppies\":180292,\"silversun pickups\":620163,\"simple plan\":1849652,\"skillet\":910507,\"slash\":2937,\"slightly stoopid\":566201,\"slipknot\":5644425,\"slum village\":288212,\"smash mouth\":323732,\"smashing pumpkins\":10690,\"snow patrol\":4264519,\"solange knowles\":1622,\"soul asylum\":65777,\"soulja boy\":148862,\"spearhead\":23123,\"spoon\":2262308,\"st. vincent\":236856,\"staind\":1256808,\"state radio\":167967,\"steel train\":46453,\"steve aoki\":76918,\"steve miller band\":178950,\"stockholm syndrome\":516,\"stone temple pilots\":955328,\"story of the year\":926057,\"sugar ray\":102416,\"sugarcult\":649480,\"sugarland\":119784,\"sum 41\":3634887,\"surfer blood\":186,\"susan boyle\":2333,\"switchfoot\":1109780,\"t-pain\":389869,\"taio cruz\":106503,\"taking back sunday\":2358591,\"talib kweli\":853753,\"taylor swift\":1173634,\"terri clark\":28941,\"the bravery\":642553,\"the civil wars\":224,\"the dandy warhols\":1118929,\"the dream\":5921,\"the flaming lips\":2351205,\"the fray\":1718387,\"the game\":1610632,\"the killers\":9586864,\"the national\":2995564,\"the neighborhood\":352,\"the offspring\":5897625,\"the roots\":1925167,\"the script\":293233,\"the starting line\":668342,\"the temper trap\":27418,\"the ting tings\":870042,\"the wailers\":27616,\"the wallflowers\":234588,\"the wanted\":298,\"theory of a deadman\":395185,\"third eye blind\":889241,\"three 6 mafia\":623504,\"three days grace\":2106900,\"tiesto\":1451,\"tim mcgraw\":209419,\"toby keith\":171620,\"toby mac\":173,\"toots & the maytals\":97,\"tori amos\":4955975,\"tracy lawrence\":15166,\"train\":200804,\"travis tritt\":25008,\"trey songz\":213205,\"tyga\":26615,\"usher\":922458,\"vampire weekend\":1513819,\"vertical horizon\":248499,\"wale\":205413,\"walk the moon\":135,\"weezer\":2162596,\"willie nelson\":263313,\"wiz khalifa\":45445,\"xzibit\":174595,\"yeasayer\":108621,\"yo gotti\":15126,\"young jeezy\":399013,\"zac brown band\":14191,\"ziggy marley\":75322}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"SELECT sum(plays) allPlays, Artist \n",
+					"FROM usersartistplays_partitioned\n",
+					"GROUP BY Artist"
+				],
+				"execution_count": 50
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"UNCACHE TABLE usersartistplays_partitioned"
+				],
+				"execution_count": 51
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"CLEAR CACHE"
+				],
+				"execution_count": 52
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"## Hyperspace Indexes\r\n",
+					"https://microsoft.github.io/hyperspace/"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
+					"from hyperspace import *\r\n",
+					"\r\n",
+					"# Create an instance of Hyperspace\r\n",
+					"hyperspace = Hyperspace(spark)\r\n",
+					"# Enable Hyperspace\r\n",
+					"Hyperspace.enable(spark)"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
+					"artist_plays_hyper = spark.read.load('abfss://synapse@warnerdatalake.dfs.core.windows.net/musicdata/userartistplays.parquet', \r\n",
+					"format='parquet')\r\n",
+					"artist_plays_hyper.createOrReplaceTempView(\"vw_artistPlaysHyper\")\r\n",
+					"\r\n",
+					"user_details_hyper = spark.read.load('abfss://synapse@warnerdatalake.dfs.core.windows.net/musicdata/UserDetails.csv', \r\n",
+					"format=\"csv\", header=\"true\", sep=',')\r\n",
+					"user_details_hyper.createOrReplaceTempView(\"vw_userDetailsHyper\")"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
+					"#Hyperspace.disable(spark)"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\r\n",
+					"SELECT vap.Artist, vap.Plays, vdh.Country from vw_artistPlaysHyper vap join vw_userDetailsHyper vdh \r\n",
+					"on vap.UserID=vdh.UserID\r\n",
+					"WHERE Artist='clutch'\r\n",
+					"ORDER BY Plays DESC\r\n",
+					"LIMIT 10"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
+					"hyperspace.createIndex(artist_plays_hyper, IndexConfig(\"artistPlaysIndex\", [\"Artist\",\"UserID\"], [\"Plays\"]))"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"display(hyperspace.indexes())"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
+					"querydf = spark.sql('''SELECT vap.Artist, vap.Plays, vdh.Country from vw_artistPlaysHyper vap join vw_userDetailsHyper vdh \r\n",
+					"on vap.UserID=vdh.UserID\r\n",
+					"WHERE Artist=\"clutch\"\r\n",
+					"ORDER BY Plays DESC\r\n",
+					"LIMIT 10''')\r\n",
+					"\r\n",
+					"spark.conf.set(\"spark.hyperspace.explain.displayMode\", \"html\")\r\n",
+					"hyperspace.explain(querydf, True, displayHTML)"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"## Refresh the index"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
+					"from pyspark.sql.types import StructField, StructType, StringType, IntegerType\r\n",
+					"\r\n",
+					"uap_schema = StructType([StructField('UserID', StringType(), True), \r\n",
+					"StructField('Artist', StringType(), True), StructField('Plays', IntegerType(), True)])\r\n",
+					"\r\n",
+					"extra_userArtistPlays = [(\"UserID1\", \"New Artist\", 100), (\"UserID2\", \"New Artist\", 100)]\r\n",
+					"\r\n",
+					"extra_userArtistPlays_df = spark.createDataFrame(extra_userArtistPlays, uap_schema)\r\n",
+					"\r\n",
+					"artist_plays_hyper = artist_plays_hyper.union(extra_userArtistPlays_df)\r\n",
+					"\r\n",
+					"hyperspace.refreshIndex(\"artistPlaysIndex\",\"incremental\")"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"## Delete index and remove it"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
+					"hyperspace.deleteIndex(\"artistPlaysIndex\")\r\n",
+					"hyperspace.vacuumIndex(\"artistPlaysIndex\")"
+				],
+				"execution_count": null
+			}
+		]
+	}
+}

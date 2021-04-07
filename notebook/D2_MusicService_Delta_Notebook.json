@@ -1,0 +1,419 @@
+{
+	"name": "D2_MusicService_Delta_Notebook",
+	"properties": {
+		"folder": {
+			"name": "Music Service"
+		},
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "DemoPool",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 2,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"synapse_widget": {
+				"version": "0.1"
+			},
+			"kernelspec": {
+				"name": "synapse_pyspark",
+				"display_name": "Synapse PySpark"
+			},
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/04bd17bd-fb60-43b0-ab6d-d660321e6a83/resourceGroups/synapse/providers/Microsoft.Synapse/workspaces/warnersynapse/bigDataPools/DemoPool",
+				"name": "DemoPool",
+				"type": "Spark",
+				"endpoint": "https://warnersynapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/DemoPool",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "2.4",
+				"nodeCount": 5,
+				"cores": 4,
+				"memory": 28,
+				"automaticScaleJobs": false
+			},
+			"sessionKeepAliveTimeout": 30
+		},
+		"cells": [
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"USE MusicService"
+				],
+				"execution_count": 1
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Write out a DF in delta format\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"# load data into a dataframe from Parquet\n",
+					"artist_plays = spark.read.load('abfss://synapse@warnerdatalake.dfs.core.windows.net/musicdata/userartistplays.parquet', format='parquet')\n",
+					"# write it out in Delta format\n",
+					"artist_plays.write.format(\"delta\").save(\"/musicdata/delta/userartistplays/\")"
+				],
+				"execution_count": 2
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"artist_plays = spark.read.format(\"delta\").load(\"/musicdata/delta/userartistplays/\")\n",
+					"artist_plays.show()"
+				],
+				"execution_count": 3
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Create table pointing to Delta folder\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"CREATE TABLE user_artist_plays_delta USING DELTA LOCATION '/musicdata/delta/userartistplays/'"
+				],
+				"execution_count": 4
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [
+								"count(1)"
+							],
+							"yLabel": "count(1)",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{\"count(1)\":{\"\":1872319}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"SELECT count(*) FROM user_artist_plays_delta"
+				],
+				"execution_count": 5
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## DML on a Delta table\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"INSERT INTO user_artist_plays_delta VALUES ('myuserid', 'newcoolartist',1)"
+				],
+				"execution_count": 6
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					}
+				},
+				"source": [
+					"%%sql\n",
+					"UPDATE user_artist_plays_delta set Plays=10 where Artist='newcoolartist'"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					}
+				},
+				"source": [
+					"%%sql\n",
+					"DELETE FROM user_artist_plays_delta where Artist='newcoolartist'"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## OK so how do we do changes in this version?\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"from delta.tables import *\n",
+					"from pyspark.sql.functions import *\n",
+					"\n",
+					"uap_delta_table = DeltaTable.forPath(spark,'/musicdata/delta/userartistplays/')"
+				],
+				"execution_count": 9
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"uap_delta_table.update(\n",
+					"  \"Artist = 'newcoolartist'\",\n",
+					"  {\"Plays\": expr(\"100\")})\n",
+					"\n",
+					"artist_plays.where(\"Artist = 'newcoolartist'\").show()"
+				],
+				"execution_count": 10
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"uap_delta_table.delete(\"Artist = 'newcoolartist'\")\n",
+					"\n",
+					"artist_plays.where(\"Artist = 'newcoolartist'\").show()"
+				],
+				"execution_count": 11
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"new_data = spark.createDataFrame(\n",
+					"    [\n",
+					"        ('myuserid', 'adele',10), \n",
+					"        ('myuserid', 'supercoolartist',10),\n",
+					"    ],\n",
+					"    ['UserID', 'Artist', 'Plays']\n",
+					")\n",
+					"\n",
+					"uap_delta_table.alias(\"oldData\")\\\n",
+					"    .merge(new_data.alias(\"newData\"), \"oldData.Artist = newData.Artist AND oldData.UserID = newData.UserID\")\\\n",
+					"    .whenMatchedUpdate(set = { \"Plays\": \"newData.Plays\"})\\\n",
+					"    .whenNotMatchedInsert(values = { \"UserID\": \"newData.UserID\",\"Artist\": \"newData.Artist\",\"Plays\": \"newData.Plays\" })\\\n",
+					"    .execute()\n",
+					"\n",
+					"artist_plays.where(\"Artist = 'supercoolartist'\").show()"
+				],
+				"execution_count": 12
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## DELETE removes the data from the latest version of the Delta table but does not remove it from the physical storage until the old versions are explicitly vacuumed! VRRROOMMM\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"path"
+							],
+							"values": [
+								"path"
+							],
+							"yLabel": "path",
+							"xLabel": "path",
+							"aggregation": "COUNT",
+							"aggByBackend": false
+						},
+						"aggData": "{\"path\":{}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"VACUUM '/musicdata/delta/userartistplays/' DRY RUN"
+				],
+				"execution_count": 13
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Check table history\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"timestamp"
+							],
+							"values": [
+								"version"
+							],
+							"yLabel": "version",
+							"xLabel": "timestamp",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{\"version\":{\"2020-11-13T18:07:02Z\":0,\"2020-11-16T14:05:18Z\":1,\"2020-11-16T18:26:48Z\":2,\"2020-11-16T18:32:47Z\":3}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"DESCRIBE HISTORY '/musicdata/delta/userartistplays/'"
+				],
+				"execution_count": 14
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Flashback!\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"delta_flashback = spark.read.format(\"delta\").option(\"versionAsOf\", 2).load('/musicdata/delta/userartistplays/')\n",
+					"delta_flashback.where(\"Artist = 'newcoolartist'\").show()"
+				],
+				"execution_count": 15
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"delta_flashback_ts = spark.read.format(\"delta\").option(\"timestampAsOf\", \"2021-03-26T00:19:22Z\").load('/musicdata/delta/userartistplays/')\n",
+					"delta_flashback_ts.where(\"Artist = 'newcoolartist'\").show()"
+				],
+				"execution_count": 16
+			}
+		]
+	}
+}

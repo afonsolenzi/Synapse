@@ -1,0 +1,305 @@
+{
+	"name": "Yelp - Notebook",
+	"properties": {
+		"folder": {
+			"name": "Other Notebooks"
+		},
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "DemoPool",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 2
+		},
+		"metadata": {
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/04bd17bd-fb60-43b0-ab6d-d660321e6a83/resourceGroups/synapse/providers/Microsoft.Synapse/workspaces/warnersynapse/bigDataPools/DemoPool",
+				"name": "DemoPool",
+				"type": "Spark",
+				"endpoint": "https://warnersynapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/DemoPool",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "2.4",
+				"nodeCount": 3,
+				"cores": 4,
+				"memory": 28
+			}
+		},
+		"cells": [
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Create a Spark Database\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					}
+				},
+				"source": [
+					"%%sql\n",
+					"\n",
+					"-- creating a database for logical organization\n",
+					"CREATE DATABASE IF NOT EXISTS Yelp\n",
+					""
+				],
+				"execution_count": 6
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Set the database as our default\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [],
+							"values": [],
+							"yLabel": "",
+							"xLabel": "",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					}
+				},
+				"source": [
+					"%%sql\n",
+					"USE Yelp"
+				],
+				"execution_count": 5
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Create Spark dataframes based on the files\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"%%pyspark\n",
+					"# load data into a python dataframe\n",
+					"df_users = spark.read.format(\"csv\").option(\"inferSchema\", \"true\").option(\"header\", \"true\").csv(\"abfss://synapse@warnerdatalake.dfs.core.windows.net/yelp/users.csv\")\n",
+					"df_business = spark.read.format(\"csv\").option(\"inferSchema\", \"true\").option(\"header\", \"true\").csv(\"abfss://synapse@warnerdatalake.dfs.core.windows.net/yelp/business.csv\")\n",
+					"df_reviews = spark.read.format(\"csv\").option(\"inferSchema\", \"true\").option(\"header\", \"true\").csv(\"abfss://synapse@warnerdatalake.dfs.core.windows.net/yelp/reviews.csv\")"
+				],
+				"execution_count": 12
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Check schema\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"%%pyspark\n",
+					"\n",
+					"df_users.printSchema()\n",
+					"df_business.printSchema()\n",
+					"df_reviews.printSchema()"
+				],
+				"execution_count": 15
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Create temporary views to query\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"%%pyspark\n",
+					"\n",
+					"# register as a temporary view [sql]\n",
+					"# reference to spark sql engine\n",
+					"df_users.createOrReplaceTempView(\"users\")\n",
+					"df_business.createOrReplaceTempView(\"business\")\n",
+					"df_reviews.createOrReplaceTempView(\"reviews\")"
+				],
+				"execution_count": 13
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Query the users view\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"user_id"
+							],
+							"values": [
+								"review_count"
+							],
+							"yLabel": "review_count",
+							"xLabel": "user_id",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{\"review_count\":{\"-_FRbCvn6hxBQ6OEEjBsGg\":1,\"-cF980T9FepNK5zyt9dX4A\":12,\"2ShtfA0YOyg_-dAY5SVYYg\":42,\"7-XGrf7Nz9eizkF05S8B6w\":9,\"7WFdpW2X090EaL8JrhCkFA\":9,\"B4xP8CelpjC4ll7j-qkmWg\":5,\"QmAeNawb7NqB42A7G7Ed9g\":18,\"RfIcMzemLiXD9I5dGcnmqg\":11,\"UrR4zbAHkbJ7dG2-0HSf1A\":1,\"WEPEf5iJS2fJPcOolJ-bQA\":6,\"_wivO-J9xBmHAiMGAmzanQ\":109,\"b6Qvkjnc_QSLtob3lOdU6Q\":1,\"dkJo8E4NW0AQ3m9z6mFGCA\":5,\"ih2Dsr8S7HqE-bhHTSmOvA\":8,\"neWHwJ2I6_U57UyETid7TQ\":44,\"tDjhzoHgiD8_UHTEM1uuBg\":14,\"ulSYorQ8SZC-UhdMzyuHdw\":1,\"vSNynb3TmT4KWi9mMzorsg\":73,\"xpaIV92-DStPlBjyfITZqA\":145,\"z-326WuXqNVF-SmbE1SRZA\":2}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					}
+				},
+				"source": [
+					"%%sql\n",
+					"SELECT * FROM users\n",
+					"LIMIT 20\n",
+					""
+				],
+				"execution_count": 17
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Query reviews\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"diagram": {
+						"activateDiagramType": 2,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"state"
+							],
+							"values": [
+								"sum(review_count)"
+							],
+							"yLabel": "sum(review_count)",
+							"xLabel": "state",
+							"aggregation": "SUM",
+							"aggByBackend": false,
+							"isValid": true,
+							"inValidMsg": null
+						},
+						"aggData": "{\"sum(review_count)\":{\"AZ\":2021978,\"NC\":547656,\"NV\":3650672,\"ON\":949540}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": true
+					}
+				},
+				"source": [
+					"%%sql\n",
+					"\n",
+					"-- query to check reviews per state\n",
+					"SELECT state, city, SUM(review_count)\n",
+					"FROM business\n",
+					"GROUP BY state, city\n",
+					"ORDER BY SUM(review_count) DESC\n",
+					"LIMIT 5"
+				],
+				"execution_count": 18
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Materialize results\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"%%pyspark\n",
+					"\n",
+					"# applying transformations\n",
+					"# saving the transforms into another dataframe\n",
+					"df_reviewed_businesses = spark.sql(\"\"\"\n",
+					"  SELECT state, city, SUM(review_count) AS review_counts\n",
+					"FROM business\n",
+					"GROUP BY state, city\n",
+					"ORDER BY SUM(review_count) DESC\n",
+					"LIMIT 5\n",
+					"\"\"\")\n",
+					"\n",
+					"df_reviewed_businesses.write.saveAsTable(\"reviewed_businesses\")"
+				],
+				"execution_count": 28
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"## Query Saved Table\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"%%sql\n",
+					"\n",
+					"-- query to check most reviewed\n",
+					"SELECT *\n",
+					"FROM reviewed_businesses\n",
+					"ORDER BY SUM(review_counts) DESC\n",
+					"LIMIT 10"
+				],
+				"execution_count": 4
+			}
+		]
+	}
+}
