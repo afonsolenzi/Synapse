@@ -1,0 +1,709 @@
+{
+	"name": "D10_Parameterized_DeltaCopy",
+	"properties": {
+		"activities": [
+			{
+				"name": "Loop Through Tables",
+				"description": "Note that the tables listed must have an \"UpdatedTimestamp\" column for the process to work. You also need to enter an initial watermark in the increments.watermarktable table.",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.TableList",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Is There New Data",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Lookup New Watermark",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Set TableName",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Lookup Old Watermark",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@greater(activity('Lookup New WaterMark').output.firstRow.NewWatermarkvalue,activity('Lookup Old WaterMark').output.firstRow.WatermarkValue)",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "Log No Data",
+										"type": "SqlPoolStoredProcedure",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"sqlPool": {
+											"referenceName": "SQLDW",
+											"type": "SqlPoolReference"
+										},
+										"typeProperties": {
+											"storedProcedureName": "[increments].[usp_incremental_dataload_logs]",
+											"storedProcedureParameters": {
+												"action": {
+													"value": "No New Data Found",
+													"type": "String"
+												},
+												"destschemaname": {
+													"value": {
+														"value": "@toUpper(pipeline().parameters.DestSchema)",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"desttablename": {
+													"value": {
+														"value": "@toUpper(variables('item'))",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"loadtable_highwatermark": {
+													"value": {
+														"value": "@{activity('Lookup New WaterMark').output.firstRow.NewWatermarkvalue}",
+														"type": "Expression"
+													},
+													"type": "Datetime"
+												},
+												"pipelinename": {
+													"value": {
+														"value": "@pipeline().Pipeline",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"pipelinerunid": {
+													"value": {
+														"value": "@pipeline().RunId",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"rundate": {
+													"value": {
+														"value": "@pipeline().TriggerTime",
+														"type": "Expression"
+													},
+													"type": "Datetime"
+												},
+												"srcschemaname": {
+													"value": {
+														"value": "@pipeline().parameters.SourceSchema",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"srctablename": {
+													"value": {
+														"value": "@variables('item')",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"watermarktable_highwatermark": {
+													"value": {
+														"value": "@{activity('Lookup Old WaterMark').output.firstRow.WatermarkValue}",
+														"type": "Expression"
+													},
+													"type": "Datetime"
+												}
+											}
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "Incremental Data Copy",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "SqlServerSource",
+												"sqlReaderQuery": {
+													"value": "select * from @{variables('item')}\nwhere UpdatedTimestamp > '@{activity('Lookup Old WaterMark').output.firstRow.WatermarkValue}' and UpdatedTimestamp <= '@{activity('Lookup New WaterMark').output.firstRow.NewWatermarkvalue}'",
+													"type": "Expression"
+												},
+												"queryTimeout": "02:00:00",
+												"partitionOption": "None"
+											},
+											"sink": {
+												"type": "SqlPoolSink",
+												"allowPolyBase": true,
+												"polyBaseSettings": {
+													"rejectValue": 0,
+													"rejectType": "value",
+													"useTypeDefault": true
+												},
+												"tableOption": "autoCreate"
+											},
+											"enableStaging": true,
+											"stagingSettings": {
+												"linkedServiceName": {
+													"referenceName": "warnersynapse-WorkspaceDefaultStorage",
+													"type": "LinkedServiceReference"
+												},
+												"path": "synapse/sqldw/stage",
+												"enableCompression": false
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "sql2012_Parameterized",
+												"type": "DatasetReference",
+												"parameters": {
+													"DatabaseName": {
+														"value": "@pipeline().parameters.SourceDBName",
+														"type": "Expression"
+													},
+													"TableName": {
+														"value": "@variables('item')",
+														"type": "Expression"
+													},
+													"SchemaName": {
+														"value": "@pipeline().parameters.SourceSchema",
+														"type": "Expression"
+													}
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "DedicatedSQLPool_SQLDW",
+												"type": "DatasetReference",
+												"parameters": {
+													"SchemaName": {
+														"value": "@pipeline().parameters.IncSchema",
+														"type": "Expression"
+													},
+													"TableName": {
+														"value": "@variables('item')",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									},
+									{
+										"name": "Complete Load",
+										"type": "SqlPoolStoredProcedure",
+										"dependsOn": [
+											{
+												"activity": "Incremental Data Copy",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"sqlPool": {
+											"referenceName": "SQLDW",
+											"type": "SqlPoolReference"
+										},
+										"typeProperties": {
+											"storedProcedureName": "[increments].[usp_complete_load]",
+											"storedProcedureParameters": {
+												"LastModifiedtime": {
+													"value": {
+														"value": "@{activity('Lookup New WaterMark').output.firstRow.NewWatermarkvalue}",
+														"type": "Expression"
+													},
+													"type": "Datetime"
+												},
+												"TableName": {
+													"value": {
+														"value": "@variables('item')",
+														"type": "Expression"
+													},
+													"type": "String"
+												}
+											}
+										}
+									},
+									{
+										"name": "Log Copy Success",
+										"type": "SqlPoolStoredProcedure",
+										"dependsOn": [
+											{
+												"activity": "Complete Load",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"sqlPool": {
+											"referenceName": "SQLDW",
+											"type": "SqlPoolReference"
+										},
+										"typeProperties": {
+											"storedProcedureName": "[increments].[usp_incremental_dataload_logs]",
+											"storedProcedureParameters": {
+												"action": {
+													"value": "New Data Loaded",
+													"type": "String"
+												},
+												"destschemaname": {
+													"value": {
+														"value": "@toUpper(pipeline().parameters.DestSchema)",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"desttablename": {
+													"value": {
+														"value": "@toUpper(variables('item'))",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"loadtable_highwatermark": {
+													"value": {
+														"value": "@{activity('Lookup New WaterMark').output.firstRow.NewWatermarkvalue}",
+														"type": "Expression"
+													},
+													"type": "Datetime"
+												},
+												"pipelinename": {
+													"value": {
+														"value": "@pipeline().Pipeline",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"pipelinerunid": {
+													"value": {
+														"value": "@pipeline().RunId",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"rundate": {
+													"value": {
+														"value": "@pipeline().TriggerTime",
+														"type": "Expression"
+													},
+													"type": "Datetime"
+												},
+												"srcschemaname": {
+													"value": {
+														"value": "@pipeline().parameters.SourceSchema",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"srctablename": {
+													"value": {
+														"value": "@variables('item')",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"watermarktable_highwatermark": {
+													"value": {
+														"value": "@{activity('Lookup Old WaterMark').output.firstRow.WatermarkValue}",
+														"type": "Expression"
+													},
+													"type": "Datetime"
+												}
+											}
+										}
+									},
+									{
+										"name": "Log Copy Failure",
+										"type": "SqlPoolStoredProcedure",
+										"dependsOn": [
+											{
+												"activity": "Incremental Data Copy",
+												"dependencyConditions": [
+													"Failed"
+												]
+											},
+											{
+												"activity": "Complete Load",
+												"dependencyConditions": [
+													"Failed"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"sqlPool": {
+											"referenceName": "SQLDW",
+											"type": "SqlPoolReference"
+										},
+										"typeProperties": {
+											"storedProcedureName": "[increments].[usp_incremental_dataload_logs]",
+											"storedProcedureParameters": {
+												"action": {
+													"value": "Copy Error See Pipeline Logs",
+													"type": "String"
+												},
+												"destschemaname": {
+													"value": {
+														"value": "@toUpper(pipeline().parameters.DestSchema)",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"desttablename": {
+													"value": {
+														"value": "@toUpper(variables('item'))",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"loadtable_highwatermark": {
+													"value": {
+														"value": "@{activity('Lookup New WaterMark').output.firstRow.NewWatermarkvalue}",
+														"type": "Expression"
+													},
+													"type": "Datetime"
+												},
+												"pipelinename": {
+													"value": {
+														"value": "@pipeline().Pipeline",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"pipelinerunid": {
+													"value": {
+														"value": "@pipeline().RunId",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"rundate": {
+													"value": {
+														"value": "@pipeline().TriggerTime",
+														"type": "Expression"
+													},
+													"type": "Datetime"
+												},
+												"srcschemaname": {
+													"value": {
+														"value": "@pipeline().parameters.SourceSchema",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"srctablename": {
+													"value": {
+														"value": "@variables('item')",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"watermarktable_highwatermark": {
+													"value": {
+														"value": "@{activity('Lookup Old WaterMark').output.firstRow.WatermarkValue}",
+														"type": "Expression"
+													},
+													"type": "Datetime"
+												}
+											}
+										}
+									},
+									{
+										"name": "Copy Throw Error",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "Log Copy Failure",
+												"dependencyConditions": [
+													"Completed"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "item",
+											"value": {
+												"value": "@div(1,0)",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "Lookup Old Watermark",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlPoolSource",
+									"sqlReaderQuery": {
+										"value": "SELECT WatermarkValue\nFROM [increments].[WatermarkTable]\nWHERE tableName = '@{item()}'",
+										"type": "Expression"
+									}
+								},
+								"dataset": {
+									"referenceName": "DedicatedSQLPool_SQLDW",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "Lookup New Watermark",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"sqlReaderQuery": {
+										"value": "select MAX(UpdatedTimestamp) as NewWatermarkvalue from @{item()}",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "sql2012_Parameterized",
+									"type": "DatasetReference",
+									"parameters": {
+										"DatabaseName": {
+											"value": "@pipeline().parameters.SourceDBName",
+											"type": "Expression"
+										}
+									}
+								}
+							}
+						},
+						{
+							"name": "Set TableName",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "item",
+								"value": {
+									"value": "@item()",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Log Process Failure",
+							"type": "SqlPoolStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Is There New Data",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"sqlPool": {
+								"referenceName": "SQLDW",
+								"type": "SqlPoolReference"
+							},
+							"typeProperties": {
+								"storedProcedureName": "[increments].[usp_incremental_dataload_logs]",
+								"storedProcedureParameters": {
+									"action": {
+										"value": "Failure Comparing Watermarks",
+										"type": "String"
+									},
+									"destschemaname": {
+										"value": {
+											"value": "@toUpper(pipeline().parameters.DestSchema)",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"desttablename": {
+										"value": {
+											"value": "@toUpper(variables('item'))",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"loadtable_highwatermark": {
+										"value": null,
+										"type": "Datetime"
+									},
+									"pipelinename": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pipelinerunid": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"rundate": {
+										"value": {
+											"value": "@pipeline().TriggerTime",
+											"type": "Expression"
+										},
+										"type": "Datetime"
+									},
+									"srcschemaname": {
+										"value": {
+											"value": "@pipeline().parameters.SourceSchema",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"srctablename": {
+										"value": {
+											"value": "@variables('item')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"watermarktable_highwatermark": {
+										"value": null,
+										"type": "Datetime"
+									}
+								}
+							}
+						},
+						{
+							"name": "Process Throw Error",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Log Process Failure",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "item",
+								"value": {
+									"value": "@div(1,0)",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"SourceSchema": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"DestSchema": {
+				"type": "string",
+				"defaultValue": "musicService"
+			},
+			"TableList": {
+				"type": "array",
+				"defaultValue": [
+					"ArtistCountries",
+					"RecordLabels"
+				]
+			},
+			"SourceDbName": {
+				"type": "string",
+				"defaultValue": "MusicService"
+			},
+			"DestDbName": {
+				"type": "string",
+				"defaultValue": "SQLDW"
+			},
+			"IncSchema": {
+				"type": "string",
+				"defaultValue": "increments"
+			}
+		},
+		"variables": {
+			"item": {
+				"type": "String",
+				"defaultValue": "dummy"
+			}
+		},
+		"folder": {
+			"name": "MusicService"
+		},
+		"annotations": []
+	}
+}

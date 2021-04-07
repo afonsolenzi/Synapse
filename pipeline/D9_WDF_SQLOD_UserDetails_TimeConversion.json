@@ -1,0 +1,46 @@
+{
+	"name": "D9_WDF_SQLOD_UserDetails_TimeConversion",
+	"properties": {
+		"activities": [
+			{
+				"name": "UserDetails_TimeConversion_WDF",
+				"type": "ExecuteWranglingDataflow",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "UserDetails_TimeConversion_WDF_Pipeline",
+						"type": "DataFlowReference"
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"sinks": {
+						"UserQuery": {
+							"name": "SinkUserDetailsWithTimeParquet",
+							"dataset": {
+								"referenceName": "UserDetailsWithTimeParquet",
+								"type": "DatasetReference"
+							},
+							"script": "sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tformat: 'parquet',\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> SinkUserDetailsWithTimeParquet"
+						}
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "MusicService"
+		},
+		"annotations": [],
+		"lastPublishTime": "2020-11-30T02:56:55Z"
+	},
+	"type": "Microsoft.Synapse/workspaces/pipelines"
+}

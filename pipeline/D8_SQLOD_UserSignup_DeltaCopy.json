@@ -1,0 +1,353 @@
+{
+	"name": "D8_SQLOD_UserSignup_DeltaCopy",
+	"properties": {
+		"description": "Copy new or updated rows only from database using external control table",
+		"activities": [
+			{
+				"name": "LookupLastWaterMark",
+				"description": "Retrieve the last high-watermark value stored in external control table",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT top 1 watermark FROM usersignuplog_watermark\norder by [timestamp] desc;",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "usersignuplog_watermark",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "LookupCurrentWaterMark",
+				"description": "Retrieve  the current maximum value in watermark column of source data store",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "select max(SignupLogId) maxId from usersignup_log",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Sql2012_MusicService_UserSignupLog",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set last watermark",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "LookupLastWaterMark",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "lastWatermark",
+					"value": {
+						"value": "@string(activity('LookupLastWaterMark').output.FirstRow.watermark)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set current watermark",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "LookupCurrentWaterMark",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "currentWatermark",
+					"value": {
+						"value": "@string(activity('LookupCurrentWaterMark').output.FirstRow.maxId)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Watermark Comparison",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "Set last watermark",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set current watermark",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@if( equals(int(variables('lastWatermark')),int(variables('currentWatermark'))), 'stop', if(greater(int(variables('currentWatermark')), int(variables('lastWatermark'))), 'work', if(less(int(variables('currentWatermark')),int(variables('lastWatermark'))),'error','undefined')))",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "work",
+							"activities": [
+								{
+									"name": "DeltaCopyfromDB",
+									"description": "Copy activity to use query to filter the delta data by > last high-watermark and <= current high-watermark from source database, and then only copy the changes to the destination store.",
+									"type": "Copy",
+									"dependsOn": [
+										{
+											"activity": "Create delta query",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"sqlReaderQuery": {
+												"value": "@variables('deltaQuery')",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"dataIntegrationUnits": 0
+									},
+									"inputs": [
+										{
+											"referenceName": "Sql2012_MusicService_UserSignupLog",
+											"type": "DatasetReference"
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "UserSignupLog_Parquet",
+											"type": "DatasetReference"
+										}
+									]
+								},
+								{
+									"name": "Create delta query",
+									"type": "SetVariable",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "deltaQuery",
+										"value": {
+											"value": "@concat('select UserId,signupdate signup_date, signuptime signup_time from usersignup_log where SignupLogId > ' , variables('lastWatermark') , \n'AND SignupLogId <= ' , variables('currentWatermark'))",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "Update watermark",
+									"type": "Copy",
+									"dependsOn": [
+										{
+											"activity": "DeltaCopyfromDB",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "AzureSqlSource",
+											"sqlReaderQuery": {
+												"value": "@concat('select ',activity('LookupCurrentWaterMark').output.FirstRow.maxId, \n' as watermark, getdate() as [timestamp]')",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".csv"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "usersignuplog_watermark",
+											"type": "DatasetReference"
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "usersignuplog_watermark_file",
+											"type": "DatasetReference"
+										}
+									]
+								}
+							]
+						},
+						{
+							"value": "error",
+							"activities": [
+								{
+									"name": "Add errorCondition",
+									"type": "AppendVariable",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "errorCondition",
+										"value": {
+											"value": "@concat('Last watermark: ' , variables('lastWatermark') , \n' is bigger than current watermark: ' , variables('currentWatermark'))",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "Throw Error",
+									"type": "AppendVariable",
+									"dependsOn": [
+										{
+											"activity": "Add errorCondition",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "errorCondition",
+										"value": {
+											"value": "@div(1,0)",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "undefined",
+							"activities": [
+								{
+									"name": "Add Undefined errorCondition",
+									"type": "AppendVariable",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "errorCondition",
+										"value": "Undefined comparison result, check package logic"
+									}
+								},
+								{
+									"name": "Throw Undefined Error",
+									"type": "AppendVariable",
+									"dependsOn": [
+										{
+											"activity": "Add Undefined errorCondition",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "errorCondition",
+										"value": {
+											"value": "@div(1,0)",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"variables": {
+			"deltaQuery": {
+				"type": "String"
+			},
+			"lastWatermark": {
+				"type": "String"
+			},
+			"currentWatermark": {
+				"type": "String"
+			},
+			"errorCondition": {
+				"type": "Array"
+			},
+			"errorThrower": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "MusicService"
+		},
+		"annotations": [],
+		"lastPublishTime": "2020-11-30T02:57:40Z"
+	},
+	"type": "Microsoft.Synapse/workspaces/pipelines"
+}

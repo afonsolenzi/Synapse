@@ -1,0 +1,46 @@
+{
+	"name": "D6_Parameter_To_Spark_Notebook",
+	"properties": {
+		"activities": [
+			{
+				"name": "Conversion notebook",
+				"type": "SynapseNotebook",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebook": {
+						"referenceName": "D6_MusicService_Parameterized_NoteBook",
+						"type": "NotebookReference"
+					},
+					"parameters": {
+						"fileToProcess": {
+							"value": {
+								"value": "@pipeline().parameters.filePath",
+								"type": "Expression"
+							},
+							"type": "string"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"filePath": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "MusicService"
+		},
+		"annotations": [],
+		"lastPublishTime": "2020-11-30T03:18:06Z"
+	},
+	"type": "Microsoft.Synapse/workspaces/pipelines"
+}

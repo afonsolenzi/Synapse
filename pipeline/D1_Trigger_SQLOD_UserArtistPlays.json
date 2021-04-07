@@ -1,0 +1,147 @@
+{
+	"name": "D1_Trigger_SQLOD_UserArtistPlays",
+	"properties": {
+		"description": "Loads user artist plays based on an event trigger",
+		"activities": [
+			{
+				"name": "Copy file to processed",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "userartistplaysFile",
+						"type": "DatasetReference",
+						"parameters": {
+							"fileFolder": {
+								"value": "@pipeline().parameters.sourceFolder",
+								"type": "Expression"
+							},
+							"fileName": {
+								"value": "@pipeline().parameters.sourceFilename",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "userartistplaysFile",
+						"type": "DatasetReference",
+						"parameters": {
+							"fileFolder": {
+								"value": "@{pipeline().parameters.sourceFolder}/processed",
+								"type": "Expression"
+							},
+							"fileName": {
+								"value": "@pipeline().parameters.sourceFilename",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "DeleteOriginal",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "Copy file to processed",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "userartistplaysFile",
+						"type": "DatasetReference",
+						"parameters": {
+							"fileFolder": {
+								"value": "@pipeline().parameters.sourceFolder",
+								"type": "Expression"
+							},
+							"fileName": {
+								"value": "@pipeline().parameters.sourceFilename",
+								"type": "Expression"
+							}
+						}
+					},
+					"logStorageSettings": {
+						"linkedServiceName": {
+							"referenceName": "warnersynapse-WorkspaceDefaultStorage",
+							"type": "LinkedServiceReference"
+						},
+						"path": "synapse/upload/userartistplays/logs"
+					},
+					"enableLogging": true,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					}
+				}
+			}
+		],
+		"parameters": {
+			"sourceFolder": {
+				"type": "string"
+			},
+			"sourceFilename": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "MusicService"
+		},
+		"annotations": [],
+		"lastPublishTime": "2020-11-30T02:45:56Z"
+	},
+	"type": "Microsoft.Synapse/workspaces/pipelines"
+}

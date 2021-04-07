@@ -1,0 +1,50 @@
+{
+	"name": "D5_MDF_UserArtistPlays_Contained",
+	"properties": {
+		"activities": [
+			{
+				"name": "UserArtistPlays",
+				"description": "DEACTIVATE THE D1 TRIGGER AND PUBLISH BEFORE RUNNING THIS!",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "UserArtistPlays",
+						"type": "DataFlowReference",
+						"parameters": {
+							"fileWildcard": {
+								"value": "'@{pipeline().parameters.fileWildcard}'",
+								"type": "Expression"
+							}
+						}
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine"
+				}
+			}
+		],
+		"parameters": {
+			"fileWildcard": {
+				"type": "string",
+				"defaultValue": "userartistplays*.csv"
+			}
+		},
+		"folder": {
+			"name": "MusicService"
+		},
+		"annotations": [],
+		"lastPublishTime": "2020-11-30T02:55:52Z"
+	},
+	"type": "Microsoft.Synapse/workspaces/pipelines"
+}
