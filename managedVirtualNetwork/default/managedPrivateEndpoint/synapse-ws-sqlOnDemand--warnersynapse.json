@@ -1,0 +1,10 @@
+{
+	"name": "synapse-ws-sqlOnDemand--warnersynapse",
+	"properties": {
+		"privateLinkResourceId": "/subscriptions/04bd17bd-fb60-43b0-ab6d-d660321e6a83/resourceGroups/synapse/providers/Microsoft.Synapse/workspaces/warnersynapse",
+		"groupId": "sqlOnDemand",
+		"fqdns": [
+			"warnersynapse-ondemand.sql.azuresynapse.net"
+		]
+	}
+}
